@@ -27,7 +27,10 @@ var rootCmd = &cobra.Command{
 		if port != 0 {
 			cfg.SetPort(port)
 		}
-		app.Run(cfg)
+
+		// Create and run the application
+		application := app.NewApp(cfg)
+		application.Run()
 	},
 }
 
