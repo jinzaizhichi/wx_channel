@@ -24,18 +24,45 @@
       <router-link to="/settings" active-class="!text-primary !bg-primary/5" class="px-4 py-2 rounded-lg text-slate-600 font-medium text-sm transition-all hover:text-primary hover:bg-slate-50">
         设置
       </router-link>
+      <router-link v-if="userStore.user?.role === 'admin'" to="/admin" active-class="!text-primary !bg-primary/5" class="px-4 py-2 rounded-lg text-slate-600 font-medium text-sm transition-all hover:text-primary hover:bg-slate-50">
+        管理
+      </router-link>
     </div>
 
-    <!-- Status Pill -->
-    <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-100">
-      <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-      <span class="text-green-700 font-bold text-xs uppercase tracking-wide">系统在线</span>
+    <!-- User Info & Credits -->
+    <div class="flex items-center gap-4">
+        <!-- Credits -->
+        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-100 text-amber-700">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+             <span class="font-bold font-mono">{{ userStore.user?.credits || 0 }}</span>
+             <span class="text-xs font-medium opacity-80">积分</span>
+        </div>
+
+        <!-- User Dropdown (Simplified) -->
+        <div class="flex items-center gap-3 pl-3 border-l border-slate-200">
+             <div class="hidden md:block text-right">
+                 <div class="text-xs font-bold text-slate-700">{{ userStore.user?.email }}</div>
+                 <div class="text-[10px] text-slate-400 uppercase tracking-wider">{{ userStore.user?.role || 'User' }}</div>
+             </div>
+             <button @click="handleLogout" class="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="退出登录">
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+             </button>
+        </div>
     </div>
   </nav>
 </template>
 
 <script setup>
-import { LayoutDashboard, Globe, ListTodo, Settings } from 'lucide-vue-next'
+import { useUserStore } from '../store/user'
+import { useRouter } from 'vue-router'
+
+const userStore = useUserStore()
+const router = useRouter()
+
+const handleLogout = () => {
+    userStore.logout()
+    router.push('/login')
+}
 </script>
 
 <style scoped>

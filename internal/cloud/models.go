@@ -12,6 +12,7 @@ const (
 	MsgTypeCommand   MessageType = "command"   // 指令
 	MsgTypeResponse  MessageType = "response"  // 响应
 	MsgTypeEvent     MessageType = "event"     // 事件告警
+	MsgTypeBind      MessageType = "bind"      // 设备绑定
 )
 
 // CloudMessage 云端消息包装

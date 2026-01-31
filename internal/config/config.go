@@ -68,6 +68,7 @@ type Config struct {
 	CloudHubURL string `mapstructure:"cloud_hub_url"` // 中央服务器地址 (e.g., ws://hub.example.com/ws/client)
 	CloudSecret string `mapstructure:"cloud_secret"`  // 云端通信密钥
 	MachineID   string `mapstructure:"machine_id"`    // 机器学习 ID (用于在云端唯一标识此实例)
+	BindToken   string `mapstructure:"bind_token"`    // 临时绑定码
 }
 
 var globalConfig *Config
@@ -153,6 +154,16 @@ func loadConfig() *Config {
 
 	// 数据库加载覆盖（保持最高优先级）
 	loadFromDatabase(config)
+
+	// Fallback: 确保端口有效
+	if config.Port == 0 {
+		// 尝试使用 DefaultPort
+		if config.DefaultPort != 0 {
+			config.Port = config.DefaultPort
+		} else {
+			config.Port = 2025
+		}
+	}
 
 	return config
 }

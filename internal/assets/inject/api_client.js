@@ -199,7 +199,7 @@ window.__wx_api_client = {
       if (key === 'key:channels:contact_list') {
         var payload = {
           query: body.keyword,
-          scene: 13,
+          scene: 19,
           requestId: String(new Date().valueOf())
         };
         var r = await window.WXU.API2.finderSearch(payload);

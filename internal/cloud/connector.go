@@ -113,6 +113,25 @@ func (c *Connector) connect() error {
 }
 
 func (c *Connector) handleConnection() {
+	// 检查是否有绑定任务
+	if c.cfg.BindToken != "" {
+		utils.LogInfo("检测到绑定码，正在发送绑定请求...")
+		payload := map[string]string{"token": c.cfg.BindToken}
+		data, _ := json.Marshal(payload)
+
+		msg := CloudMessage{
+			ID:        fmt.Sprintf("bind-%d", time.Now().Unix()),
+			Type:      MsgTypeBind,
+			ClientID:  c.clientID,
+			Payload:   data,
+			Timestamp: time.Now().Unix(),
+		}
+
+		if err := c.send(msg); err != nil {
+			utils.LogError("绑定请求发送失败: %v", err)
+		}
+	}
+
 	// 启动心跳
 	go c.heartbeatLoop()
 

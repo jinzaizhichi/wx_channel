@@ -70,26 +70,33 @@
     </div>
 
     <!-- Task Detail Modal -->
-    <div v-if="selectedTask" class="modal-overlay" @click="selectedTask = null">
+    <div v-if="selectedTask || detailLoading" class="modal-overlay" @click="selectedTask = null; detailLoading=false">
       <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h3>任务详情 #{{ selectedTask.id }}</h3>
-          <button class="close-btn" @click="selectedTask = null">×</button>
+        <div v-if="detailLoading" class="text-center py-10">
+            <div class="spinner mx-auto mb-4"></div>
+            <p class="text-slate-500">加载详情中...</p>
         </div>
         
-        <div class="detail-row">
-            <label>Payload:</label>
-            <pre class="code-block">{{ formatJson(selectedTask.payload) }}</pre>
-        </div>
-        
-        <div class="detail-row">
-            <label>Result:</label>
-            <pre class="code-block">{{ formatJson(selectedTask.result) }}</pre>
-        </div>
+        <div v-if="selectedTask">
+            <div class="modal-header">
+            <h3>任务详情 #{{ selectedTask.id }}</h3>
+            <button class="close-btn" @click="selectedTask = null">×</button>
+            </div>
+            
+            <div class="detail-row">
+                <label>Payload:</label>
+                <pre class="code-block">{{ formatJson(selectedTask.payload) }}</pre>
+            </div>
+            
+            <div class="detail-row">
+                <label>Result:</label>
+                <pre class="code-block">{{ formatJson(selectedTask.result) }}</pre>
+            </div>
 
-        <div v-if="selectedTask.error" class="detail-row">
-            <label>Error:</label>
-            <div class="error-msg">{{ selectedTask.error }}</div>
+            <div v-if="selectedTask.error" class="detail-row">
+                <label>Error:</label>
+                <div class="error-msg">{{ selectedTask.error }}</div>
+            </div>
         </div>
       </div>
     </div>
@@ -102,15 +109,27 @@ import { useTaskStore } from '../store/task'
 import { RefreshCw } from 'lucide-vue-next'
 import { formatTime } from '../utils/format'
 
+import axios from 'axios'
+
 const taskStore = useTaskStore()
 const selectedTask = ref(null)
+const detailLoading = ref(false)
 
 onMounted(() => {
   taskStore.fetchTasks()
 })
 
-const showDetail = (task) => {
-    selectedTask.value = task
+const showDetail = async (task) => {
+    detailLoading.value = true
+    selectedTask.value = null // Reset
+    try {
+        const res = await axios.get(`/api/tasks/detail?id=${task.id}`)
+        selectedTask.value = res.data
+    } catch (err) {
+        alert("Fetch detail failed: " + err.message)
+    } finally {
+        detailLoading.value = false
+    }
 }
 
 const formatJson = (str) => {
