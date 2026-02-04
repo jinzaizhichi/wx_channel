@@ -8,8 +8,8 @@
       <!-- 顶部栏 - 固定在顶部 -->
       <header class="bg-white shadow-sm px-8 py-4 flex items-center justify-between sticky top-0 z-40">
         <div>
-          <h1 class="text-2xl font-bold text-slate-800">{{ pageTitle }}</h1>
-          <p class="text-sm text-slate-500">{{ pageDescription }}</p>
+          <h1 class="text-2xl font-serif font-bold text-slate-800">{{ pageTitle }}</h1>
+          <p class="text-sm font-sans text-slate-500">{{ pageDescription }}</p>
         </div>
         
         <!-- 用户信息 -->
