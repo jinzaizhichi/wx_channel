@@ -48,10 +48,11 @@ func (h *Hub) Run() {
 			h.Clients[client.ID] = client
 			h.mu.Unlock()
 
-			log.Printf("Client connected: %s", client.ID)
+			log.Printf("Client connected: %s from %s", client.ID, client.IP)
 			// DB: Mark as online
 			database.UpsertNode(&models.Node{
 				ID:       client.ID,
+				IP:       client.IP,
 				Status:   "online",
 				LastSeen: time.Now(),
 			})
@@ -203,7 +204,16 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := NewClient(clientID, conn, h)
+	// 获取客户端 IP 地址
+	clientIP := r.Header.Get("X-Real-IP")
+	if clientIP == "" {
+		clientIP = r.Header.Get("X-Forwarded-For")
+	}
+	if clientIP == "" {
+		clientIP = r.RemoteAddr
+	}
+
+	client := NewClient(clientID, conn, h, clientIP)
 	h.Register <- client
 
 	// Start reading (blocking until disconnect)

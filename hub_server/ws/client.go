@@ -21,6 +21,7 @@ type Client struct {
 	ID       string
 	Hostname string
 	Version  string
+	IP       string
 	LastSeen time.Time
 	Conn     *websocket.Conn
 	mu       sync.Mutex
@@ -30,9 +31,10 @@ type Client struct {
 	Hub          *Hub
 }
 
-func NewClient(id string, conn *websocket.Conn, hub *Hub) *Client {
+func NewClient(id string, conn *websocket.Conn, hub *Hub, ip string) *Client {
 	return &Client{
 		ID:           id,
+		IP:           ip,
 		LastSeen:     time.Now(),
 		Conn:         conn,
 		respChannels: make(map[string]chan ResponsePayload),
@@ -94,6 +96,7 @@ func (c *Client) handleMessage(msg CloudMessage) {
 			ID:       c.ID,
 			Hostname: p.Hostname,
 			Version:  p.Version,
+			IP:       c.IP,
 			Status:   "online",
 			LastSeen: now,
 		})
