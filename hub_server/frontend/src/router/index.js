@@ -63,11 +63,6 @@ const router = createRouter({
             meta: { requiresAuth: true, layout: 'Sidebar' }
         },
         {
-            path: '/settings',
-            component: () => import('../views/Settings.vue'),
-            meta: { requiresAuth: true, layout: 'Sidebar' }
-        },
-        {
             path: '/monitoring',
             name: 'Monitoring',
             component: () => import('../views/Monitoring.vue'),

@@ -57,7 +57,6 @@ const pageTitle = computed(() => {
     '/tasks': '任务追踪',
     '/monitoring': '系统监控',
     '/profile': '个人资料',
-    '/settings': '系统设置',
     '/admin': '系统管理'
   }
   // 处理动态路由
@@ -76,7 +75,6 @@ const pageDescription = computed(() => {
     '/tasks': '查看和管理任务执行状态',
     '/monitoring': '实时监控系统运行状态',
     '/profile': '查看和编辑个人信息',
-    '/settings': '配置系统参数和选项',
     '/admin': '管理用户和系统资源'
   }
   // 处理动态路由

@@ -47,10 +47,6 @@
         <component :is="User" class="w-5 h-5" />
         <span>个人资料</span>
       </router-link>
-      <router-link to="/settings" active-class="bg-bg shadow-neu-pressed text-primary !text-primary" class="flex items-center gap-3 px-4 py-3 mb-2 rounded-xl text-slate-500 font-medium transition-all hover:bg-bg hover:shadow-neu-sm hover:text-primary active:shadow-neu-pressed">
-        <component :is="Settings" class="w-5 h-5" />
-        <span>系统设置</span>
-      </router-link>
       
       <div class="text-xs font-bold text-slate-400 uppercase tracking-widest px-4 mb-2 mt-6 font-sans">Admin</div>
       <router-link to="/admin" active-class="bg-bg shadow-neu-pressed text-primary !text-primary" class="flex items-center gap-3 px-4 py-3 mb-2 rounded-xl text-slate-500 font-medium transition-all hover:bg-bg hover:shadow-neu-sm hover:text-primary active:shadow-neu-pressed">
@@ -73,5 +69,5 @@
 </template>
 
 <script setup>
-import { LayoutDashboard, Globe, ListTodo, Activity, Settings, Monitor, Rss, User, Shield } from 'lucide-vue-next'
+import { LayoutDashboard, Globe, ListTodo, Activity, Monitor, Rss, User, Shield } from 'lucide-vue-next'
 </script>

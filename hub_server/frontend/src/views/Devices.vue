@@ -5,6 +5,32 @@
       <p class="text-slate-500">管理您绑定的所有设备</p>
     </div>
 
+    <!-- 添加新设备 -->
+    <div class="bg-bg shadow-neu rounded-2xl p-6 mb-8">
+      <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800 mb-2">添加新设备</h2>
+          <p class="text-slate-500 text-sm">在您的客户端上运行以下命令以绑定此账号。验证码有效期为 5 分钟。</p>
+        </div>
+        <div class="flex flex-col items-end gap-3 w-full md:w-auto">
+          <div v-if="bindToken" class="flex items-center gap-3 bg-bg shadow-neu-pressed px-4 py-3 rounded-xl">
+            <span class="font-mono text-2xl font-bold text-primary tracking-widest">{{ bindToken }}</span>
+            <button @click="copyToken" class="p-2 rounded-lg bg-bg shadow-neu hover:shadow-neu-sm text-slate-600 transition-all" title="复制">
+              <component :is="Copy" class="w-5 h-5" />
+            </button>
+          </div>
+          <button 
+            v-else
+            @click="generateToken" 
+            class="px-6 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 shadow-neu transition-all"
+          >
+            生成绑定码
+          </button>
+          <p v-if="bindToken" class="text-xs text-slate-400">命令: client bind {{ bindToken }}</p>
+        </div>
+      </div>
+    </div>
+
     <!-- 统计卡片 -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="bg-bg shadow-neu rounded-2xl p-6">
@@ -65,7 +91,7 @@
       <div v-else-if="devices.length === 0" class="text-center py-12">
         <component :is="Monitor" class="w-16 h-16 text-slate-300 mx-auto mb-4" />
         <p class="text-slate-500 mb-2">暂无设备</p>
-        <p class="text-sm text-slate-400">请在客户端使用绑定码绑定设备</p>
+        <p class="text-sm text-slate-400">请使用上方的绑定码绑定设备</p>
       </div>
 
       <div v-else class="space-y-4">
@@ -213,9 +239,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { Monitor, Wifi, WifiOff, RefreshCw, Loader2, Unlink, Trash2 } from 'lucide-vue-next'
+import { Monitor, Wifi, WifiOff, RefreshCw, Loader2, Unlink, Trash2, Copy } from 'lucide-vue-next'
 import axios from 'axios'
 
+const bindToken = ref('')
 const devices = ref([])
 const loading = ref(false)
 const showConfirm = ref(false)
@@ -230,6 +257,21 @@ const onlineCount = computed(() =>
 const offlineCount = computed(() => 
   devices.value.filter(d => d.status !== 'online').length
 )
+
+const generateToken = async () => {
+  try {
+    const res = await axios.post('/api/device/bind_token')
+    bindToken.value = res.data.token
+  } catch (err) {
+    console.error('Generate token failed', err)
+    alert('生成绑定码失败')
+  }
+}
+
+const copyToken = () => {
+  navigator.clipboard.writeText(bindToken.value)
+  // TODO: 添加复制成功提示
+}
 
 const formatTime = (time) => {
   if (!time) return 'N/A'
