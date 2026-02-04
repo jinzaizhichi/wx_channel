@@ -27,6 +27,9 @@
         <span class="text-xs uppercase tracking-wider text-text-muted">Connected to</span>
         <strong>{{ client.hostname }}</strong>
       </div>
+      <div v-else class="px-4 py-2 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm flex items-center gap-2">
+        <span>⚡ 自动选择设备</span>
+      </div>
     </header>
 
     <div class="max-w-4xl mx-auto">
@@ -144,11 +147,6 @@ const goBack = () => {
 }
 
 const fetchVideos = async (loadMore = false) => {
-  if (!client.value) {
-      alert("未连接终端")
-      return
-  }
-
   if (!loadMore) {
       loadingVideos.value = true
       videos.value = []
