@@ -24,13 +24,13 @@ const router = createRouter({
             path: '/dashboard',
             name: 'Dashboard',
             component: () => import('../views/Dashboard.vue'),
-            meta: { requiresAuth: true }
+            meta: { requiresAuth: true, layout: 'Sidebar' }
         },
         {
             path: '/search',
             name: 'Search',
             component: () => import('../views/Search.vue'),
-            meta: { requiresAuth: true }
+            meta: { requiresAuth: true, layout: 'Sidebar' }
         },
         {
             path: '/profile',
@@ -54,32 +54,32 @@ const router = createRouter({
             path: '/tasks',
             name: 'Tasks',
             component: () => import('../views/Tasks.vue'),
-            meta: { requiresAuth: true }
+            meta: { requiresAuth: true, layout: 'Sidebar' }
         },
         {
             path: '/devices',
             name: 'Devices',
             component: () => import('../views/Devices.vue'),
-            meta: { requiresAuth: true }
+            meta: { requiresAuth: true, layout: 'Sidebar' }
         },
         {
             path: '/settings',
             component: () => import('../views/Settings.vue'),
-            meta: { layout: 'MainLayout', requiresAuth: true }
+            meta: { requiresAuth: true, layout: 'Sidebar' }
         },
         {
             path: '/monitoring',
             name: 'Monitoring',
             component: () => import('../views/Monitoring.vue'),
-            meta: { requiresAuth: true }
+            meta: { requiresAuth: true, layout: 'Sidebar' }
         },
         {
             path: '/admin',
             component: () => import('../views/Admin.vue'),
             meta: {
-                layout: 'MainLayout',
                 requiresAuth: true,
-                requiresAdmin: true
+                requiresAdmin: true,
+                layout: 'Sidebar'
             }
         }
     ]
