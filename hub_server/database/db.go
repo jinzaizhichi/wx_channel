@@ -205,3 +205,47 @@ func GetSystemStats() (map[string]interface{}, error) {
 		"total_credits": totalCredits,
 	}, nil
 }
+
+// UpdateUserRole updates a user's role
+func UpdateUserRole(userID uint, role string) error {
+	return DB.Model(&models.User{}).Where("id = ?", userID).Update("role", role).Error
+}
+
+// DeleteUser permanently deletes a user and all related data
+func DeleteUser(userID uint) error {
+	// 开始事务
+	tx := DB.Begin()
+	
+	// 删除用户的设备
+	if err := tx.Where("user_id = ?", userID).Delete(&models.Node{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	
+	// 删除用户的任务
+	if err := tx.Where("user_id = ?", userID).Delete(&models.Task{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	
+	// 删除用户的交易记录
+	if err := tx.Where("user_id = ?", userID).Delete(&models.Transaction{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	
+	// 删除用户的订阅
+	if err := tx.Where("user_id = ?", userID).Delete(&models.Subscription{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	
+	// 删除用户
+	if err := tx.Delete(&models.User{}, userID).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	
+	// 提交事务
+	return tx.Commit().Error
+}
