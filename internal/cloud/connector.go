@@ -205,6 +205,12 @@ func (c *Connector) handleConnection() {
 			continue
 		}
 
+		// 处理心跳响应
+		if msg.Type == "heartbeat_ack" {
+			// 心跳响应，更新最后接收时间
+			continue
+		}
+
 		// 使用 goroutine 处理消息，但添加 panic 恢复
 		go func(m CloudMessage) {
 			defer func() {
@@ -226,11 +232,16 @@ func min(a, b int) int {
 }
 
 func (c *Connector) heartbeatLoop() {
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(10 * time.Second) // 优化：缩短心跳间隔到 10 秒
 	defer ticker.Stop()
 
 	missedHeartbeats := 0
 	maxMissed := 3 // 连续 3 次心跳失败则重连
+
+	// 立即发送第一次心跳
+	if err := c.sendHeartbeat(); err != nil {
+		utils.LogWarn("初始心跳发送失败: %v", err)
+	}
 
 	for {
 		select {

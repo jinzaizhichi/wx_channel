@@ -73,26 +73,29 @@ func (h *Hub) Run() {
 
 // cleanupStaleConnections 清理僵尸连接
 func (h *Hub) cleanupStaleConnections() {
-	ticker := time.NewTicker(1 * time.Minute)
+	ticker := time.NewTicker(15 * time.Second) // 优化：缩短检测间隔到 15 秒
 	defer ticker.Stop()
 
 	for range ticker.C {
 		h.mu.RLock()
 		staleClients := []*Client{}
-		threshold := time.Now().Add(-2 * time.Minute) // 2分钟无心跳视为僵尸连接
+		threshold := time.Now().Add(-45 * time.Second) // 优化：45秒无心跳视为僵尸连接（客户端10秒心跳 + 3次重试 + 15秒容错）
 
 		for _, client := range h.Clients {
 			client.mu.Lock()
-			if client.LastSeen.Before(threshold) {
+			lastSeen := client.LastSeen
+			client.mu.Unlock()
+			
+			if lastSeen.Before(threshold) {
 				staleClients = append(staleClients, client)
 			}
-			client.mu.Unlock()
 		}
 		h.mu.RUnlock()
 
 		// 清理僵尸连接
 		for _, client := range staleClients {
-			log.Printf("清理僵尸连接: %s (最后心跳: %v)", client.ID, client.LastSeen)
+			log.Printf("清理僵尸连接: %s (最后心跳: %v, 已超时 %v)", 
+				client.ID, client.LastSeen, time.Since(client.LastSeen))
 			h.Unregister <- client
 		}
 	}

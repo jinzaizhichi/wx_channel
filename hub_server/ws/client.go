@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"sync"
@@ -74,8 +75,9 @@ func (c *Client) ReadPump() {
 }
 
 func (c *Client) handleMessage(msg CloudMessage) {
+	now := time.Now()
 	c.mu.Lock()
-	c.LastSeen = time.Now()
+	c.LastSeen = now
 	c.mu.Unlock()
 
 	switch msg.Type {
@@ -87,13 +89,17 @@ func (c *Client) handleMessage(msg CloudMessage) {
 		c.Version = p.Version
 		c.mu.Unlock()
 
+		// 更新数据库
 		database.UpsertNode(&models.Node{
 			ID:       c.ID,
 			Hostname: p.Hostname,
 			Version:  p.Version,
 			Status:   "online",
-			LastSeen: time.Now(),
+			LastSeen: now,
 		})
+		
+		// 发送心跳响应（Pong）
+		c.sendHeartbeatResponse(msg.ID)
 
 	case "metrics":
 		var payload struct {
@@ -158,4 +164,24 @@ func (c *Client) WriteMessage(msg []byte) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.Conn.WriteMessage(websocket.TextMessage, msg)
+}
+
+// sendHeartbeatResponse 发送心跳响应
+func (c *Client) sendHeartbeatResponse(requestID string) {
+	response := map[string]interface{}{
+		"id":        fmt.Sprintf("pong-%s", requestID),
+		"type":      "heartbeat_ack",
+		"client_id": "hub-server",
+		"timestamp": time.Now().Unix(),
+	}
+	
+	respBytes, err := json.Marshal(response)
+	if err != nil {
+		log.Printf("序列化心跳响应失败: %v", err)
+		return
+	}
+	
+	if err := c.WriteMessage(respBytes); err != nil {
+		log.Printf("发送心跳响应失败: %v", err)
+	}
 }
