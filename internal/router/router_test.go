@@ -179,3 +179,28 @@ func TestAuthMiddleware_ProtectedPathRequiresToken(t *testing.T) {
 		t.Fatalf("expected 200 with token, got %d", w.Code)
 	}
 }
+
+func TestVideoPlayRoute_UsesPlayHandler(t *testing.T) {
+	router := newTestRouter()
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/video/play", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected status 400, got %d", w.Code)
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response JSON: %v", err)
+	}
+
+	msg, _ := resp["message"].(string)
+	if msg == "" {
+		msg, _ = resp["error"].(string)
+	}
+	if !strings.Contains(msg, "url parameter is required") {
+		t.Fatalf("expected play handler error message, got: %v", msg)
+	}
+}

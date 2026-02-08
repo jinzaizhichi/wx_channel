@@ -108,8 +108,9 @@ func (r *APIRouter) registerRoutes() {
 	r.mux.HandleFunc("/api/export/browse", r.exportService.HandleExportBrowseHistory)
 	r.mux.HandleFunc("/api/export/downloads", r.exportService.HandleExportDownloadRecords)
 
-	// 控制台 API - 视频流代理
-	r.mux.HandleFunc("/api/video/", r.consoleHandler.HandleVideoStream)
+	// 控制台 API - 视频相关
+	r.mux.HandleFunc("/api/video/stream", r.consoleHandler.HandleVideoStream)
+	r.mux.HandleFunc("/api/video/play", r.consoleHandler.HandleVideoPlay)
 
 	// 控制台 API - 触发评论采集
 	r.mux.HandleFunc("/api/control/comment/start", r.consoleHandler.HandleStartCommentCollection)
