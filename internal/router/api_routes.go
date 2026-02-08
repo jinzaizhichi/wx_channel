@@ -59,7 +59,7 @@ func NewAPIRouter(cfg *config.Config, hub *websocket.Hub, sunny *SunnyNet.Sunny)
 		consoleHandler:     handlers.NewConsoleAPIHandler(cfg, hub),
 		searchService:      api.NewSearchService(hub),
 		systemService:      api.NewSystemService(),
-		logsService:        api.NewLogsService(),
+		logsService:        api.NewLogsService(cfg),
 		exportService:      api.NewExportAPI(),
 		proxyService:       api.NewProxyService(sunny, cfg.Port),
 		certificateService: api.NewCertificateService(sunny),
