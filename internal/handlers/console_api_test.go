@@ -1,7 +1,11 @@
 package handlers
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -45,3 +49,25 @@ func TestIsPathWithinBase(t *testing.T) {
 	}
 }
 
+func TestHandleQueueFail_InvalidJSONReturnsBadRequest(t *testing.T) {
+	handler := &ConsoleAPIHandler{}
+	req := httptest.NewRequest(http.MethodPut, "/api/queue/test-id/fail", strings.NewReader("{"))
+	rr := httptest.NewRecorder()
+
+	handler.HandleQueueFail(rr, req, "test-id")
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	}
+
+	var resp APIResponse
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if resp.Success {
+		t.Fatalf("success = true, want false")
+	}
+	if resp.Error != "invalid request body" {
+		t.Fatalf("error = %q, want %q", resp.Error, "invalid request body")
+	}
+}

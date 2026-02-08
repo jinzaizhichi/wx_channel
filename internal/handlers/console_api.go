@@ -637,7 +637,10 @@ func (h *ConsoleAPIHandler) HandleQueueFail(w http.ResponseWriter, r *http.Reque
 	var req struct {
 		Error string `json:"error"`
 	}
-	h.parseJSON(r, &req)
+	if err := h.parseJSON(r, &req); err != nil {
+		h.sendError(w, r, http.StatusBadRequest, "invalid request body")
+		return
+	}
 
 	errorMsg := req.Error
 	if errorMsg == "" {
