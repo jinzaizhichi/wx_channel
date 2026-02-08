@@ -25,6 +25,7 @@ type APIRouter struct {
 	certificateService *api.CertificateService
 	versionService     *api.VersionAPI
 	allowedOrigins     []string
+	secretToken        string
 }
 
 // Handle implements Interceptor
@@ -64,6 +65,7 @@ func NewAPIRouter(cfg *config.Config, hub *websocket.Hub, sunny *SunnyNet.Sunny)
 		certificateService: api.NewCertificateService(sunny),
 		versionService:     api.NewVersionAPI(),
 		allowedOrigins:     cfg.AllowedOrigins,
+		secretToken:        cfg.SecretToken,
 	}
 
 	router.registerRoutes()
@@ -132,6 +134,7 @@ func (r *APIRouter) Handler() http.Handler {
 		RecoveryMiddleware,
 		LoggerMiddleware,
 		CORSMiddleware(r.allowedOrigins),
+		AuthMiddleware(r.secretToken),
 	)
 }
 

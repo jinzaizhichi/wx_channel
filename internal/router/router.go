@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"wx_channel/internal/response"
@@ -79,6 +80,44 @@ func CORSMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
 			// 处理预检请求
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// AuthMiddleware 基于配置的 token 进行可选认证。
+// 当 token 为空时，表示不启用认证。
+func AuthMiddleware(secretToken string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// 不启用 token 时直接放行
+			if secretToken == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// 允许 CORS 预检请求直接通过
+			if r.Method == http.MethodOptions {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			token := r.Header.Get("X-Local-Auth")
+			if token == "" {
+				auth := r.Header.Get("Authorization")
+				if strings.HasPrefix(strings.ToLower(auth), "bearer ") {
+					token = strings.TrimSpace(auth[len("Bearer "):])
+				}
+			}
+			if token == "" {
+				token = r.URL.Query().Get("token")
+			}
+
+			if token != secretToken {
+				response.ErrorWithStatus(w, http.StatusUnauthorized, 401, "unauthorized")
 				return
 			}
 

@@ -111,6 +111,9 @@ window.__wx_api_client = {
 
     var wsPort = ports[index];
     var wsUrl = 'ws://127.0.0.1:' + wsPort + '/ws/api';
+    if (window.__WX_LOCAL_TOKEN__) {
+      wsUrl += '?token=' + encodeURIComponent(window.__WX_LOCAL_TOKEN__);
+    }
 
     console.log('[API客户端] 尝试连接:', wsUrl);
 

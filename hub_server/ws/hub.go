@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 	"wx_channel/hub_server/database"
@@ -85,7 +87,7 @@ func (h *Hub) cleanupStaleConnections() {
 			client.mu.Lock()
 			lastSeen := client.LastSeen
 			client.mu.Unlock()
-			
+
 			if lastSeen.Before(threshold) {
 				staleClients = append(staleClients, client)
 			}
@@ -94,7 +96,7 @@ func (h *Hub) cleanupStaleConnections() {
 
 		// 清理僵尸连接
 		for _, client := range staleClients {
-			log.Printf("清理僵尸连接: %s (最后心跳: %v, 已超时 %v)", 
+			log.Printf("清理僵尸连接: %s (最后心跳: %v, 已超时 %v)",
 				client.ID, client.LastSeen, time.Since(client.LastSeen))
 			h.Unregister <- client
 		}
@@ -213,7 +215,7 @@ func (h *Hub) Call(userID uint, clientID string, action string, data interface{}
 			database.UpdateTaskResult(task.ID, "failed", "", "响应通道已关闭")
 			return ResponsePayload{}, fmt.Errorf("响应通道已关闭")
 		}
-		
+
 		resBytes, _ := json.Marshal(resp.Data)
 		status := "success"
 		if !resp.Success {
@@ -224,7 +226,7 @@ func (h *Hub) Call(userID uint, clientID string, action string, data interface{}
 		}
 		database.UpdateTaskResult(task.ID, status, string(resBytes), resp.Error)
 		return resp, nil
-		
+
 	case <-time.After(timeout):
 		log.Printf("远程调用超时: ID=%s, Timeout=%v", reqID, timeout)
 		database.UpdateTaskResult(task.ID, "timeout", "", "request timeout")
@@ -233,6 +235,18 @@ func (h *Hub) Call(userID uint, clientID string, action string, data interface{}
 }
 
 func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
+	if !isHubOriginAllowed(r.Header.Get("Origin")) {
+		http.Error(w, "forbidden origin", http.StatusForbidden)
+		return
+	}
+
+	if expected := strings.TrimSpace(os.Getenv("HUB_WS_TOKEN")); expected != "" {
+		if extractHubToken(r) != expected {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+	}
+
 	clientID := r.Header.Get("X-Client-ID")
 	if clientID == "" {
 		clientID = r.URL.Query().Get("client_id")
@@ -244,8 +258,7 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
 
 	// 使用 nhooyr.io/websocket 升级连接
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-		InsecureSkipVerify: true, // 允许所有来源
-		CompressionMode:    websocket.CompressionContextTakeover, // 启用压缩
+		CompressionMode: websocket.CompressionContextTakeover, // 启用压缩
 	})
 	if err != nil {
 		log.Printf("Upgrade error: %v", err)
@@ -266,4 +279,37 @@ func (h *Hub) ServeWs(w http.ResponseWriter, r *http.Request) {
 
 	// Start reading (blocking until disconnect)
 	go client.ReadPump()
+}
+
+func isHubOriginAllowed(origin string) bool {
+	allowedRaw := strings.TrimSpace(os.Getenv("HUB_ALLOWED_ORIGINS"))
+	if allowedRaw == "" {
+		return true
+	}
+	if origin == "" {
+		return false
+	}
+
+	parts := strings.Split(allowedRaw, ",")
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "*" || p == origin {
+			return true
+		}
+	}
+	return false
+}
+
+func extractHubToken(r *http.Request) string {
+	token := strings.TrimSpace(r.Header.Get("X-Local-Auth"))
+	if token != "" {
+		return token
+	}
+
+	auth := strings.TrimSpace(r.Header.Get("Authorization"))
+	if strings.HasPrefix(strings.ToLower(auth), "bearer ") {
+		return strings.TrimSpace(auth[len("Bearer "):])
+	}
+
+	return strings.TrimSpace(r.URL.Query().Get("token"))
 }

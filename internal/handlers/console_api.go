@@ -1307,6 +1307,22 @@ func (h *ConsoleAPIHandler) HandleVideoStream(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// 限制只允许访问下载目录内的文件，防止任意文件读取
+	downloadsDir, err := h.getConfig().GetResolvedDownloadsDir()
+	if err != nil {
+		h.sendError(w, r, http.StatusInternalServerError, "failed to resolve downloads directory")
+		return
+	}
+	absDownloadsDir, err := filepath.Abs(downloadsDir)
+	if err != nil {
+		h.sendError(w, r, http.StatusInternalServerError, "failed to resolve downloads directory")
+		return
+	}
+	if !isPathWithinBase(absDownloadsDir, absPath) {
+		h.sendError(w, r, http.StatusForbidden, "access to path outside downloads directory is forbidden")
+		return
+	}
+
 	// 检查文件是否存在
 	fileInfo, err := os.Stat(absPath)
 	if os.IsNotExist(err) {
@@ -1402,6 +1418,24 @@ func (h *ConsoleAPIHandler) HandleVideoStream(w http.ResponseWriter, r *http.Req
 		// 复制整个文件
 		io.Copy(w, file)
 	}
+}
+
+// isPathWithinBase returns true when targetPath is within baseDir.
+func isPathWithinBase(baseDir, targetPath string) bool {
+	rel, err := filepath.Rel(baseDir, targetPath)
+	if err != nil {
+		return false
+	}
+	if rel == "." {
+		return true
+	}
+	if rel == ".." {
+		return false
+	}
+	if strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return false
+	}
+	return !filepath.IsAbs(rel)
 }
 
 // HandleVideoPlay 处理 GET /api/video/play - 远程视频流式播放（支持加密解密）

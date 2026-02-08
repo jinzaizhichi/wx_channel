@@ -470,7 +470,7 @@ func (app *App) startWebSocketServer(wsPort int) {
 		mux.Handle("/api/", app.APIRouter)
 	}
 
-	wsHandler := websocket.NewHandler(app.WSHub)
+	wsHandler := websocket.NewHandler(app.WSHub, app.Cfg.AllowedOrigins, app.Cfg.SecretToken)
 	mux.HandleFunc("/ws/api", wsHandler.ServeHTTP)
 
 	mux.HandleFunc("/ws/health", func(w http.ResponseWriter, r *http.Request) {

@@ -3,10 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"wx_channel/internal/config"
 
 	"wx_channel/internal/database"
 	"wx_channel/internal/services"
@@ -335,9 +337,21 @@ const (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	// 允许本地服务的所有来源
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		cfg := config.Get()
+		if cfg == nil || len(cfg.AllowedOrigins) == 0 {
+			return true
+		}
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return false
+		}
+		for _, o := range cfg.AllowedOrigins {
+			if o == "*" || o == origin {
+				return true
+			}
+		}
+		return false
 	},
 }
 
@@ -434,6 +448,15 @@ func NewWebSocketHandler() *WebSocketHandler {
 // HandleWebSocket 处理 WebSocket 连接升级
 // Endpoint: /ws
 func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	cfg := config.Get()
+	if cfg != nil && cfg.SecretToken != "" {
+		token := extractWSToken(r)
+		if token != cfg.SecretToken {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+	}
+
 	// 将 HTTP 连接升级到 WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -496,6 +519,20 @@ func (h *WebSocketHandler) HandleWebSocket(w http.ResponseWriter, r *http.Reques
 // generateClientID 生成唯一的客户端 ID
 func generateClientID() string {
 	return time.Now().Format("20060102150405.000000")
+}
+
+func extractWSToken(r *http.Request) string {
+	token := strings.TrimSpace(r.Header.Get("X-Local-Auth"))
+	if token != "" {
+		return token
+	}
+
+	auth := strings.TrimSpace(r.Header.Get("Authorization"))
+	if strings.HasPrefix(strings.ToLower(auth), "bearer ") {
+		return strings.TrimSpace(auth[len("Bearer "):])
+	}
+
+	return strings.TrimSpace(r.URL.Query().Get("token"))
 }
 
 // ServeWs 是用于处理 WebSocket 请求的便捷函数
