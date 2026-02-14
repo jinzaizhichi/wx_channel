@@ -159,7 +159,7 @@ go mod download
 # 编辑 winres/winres.json
 
 # 4. 生成 Windows 资源
-go-winres make
+go-winres make --arch amd64
 
 # 5. 编译程序
 go build -ldflags="-s -w" -o wx_channel.exe
