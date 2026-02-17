@@ -21,7 +21,7 @@
                 <div class="space-y-1">
                     <label class="text-sm font-semibold text-gray-700 ml-1">邮箱</label>
                     <IconField iconPosition="left">
-                        <InputIcon class="pi pi-envelope text-gray-400 !absolute !top-1/2 !-translate-y-1/2" />
+                        <InputIcon class="pi pi-envelope text-gray-400" />
                         <InputText 
                             id="email" 
                             v-model="email" 
@@ -37,7 +37,7 @@
                 <div class="space-y-1">
                     <label class="text-sm font-semibold text-gray-700 ml-1">密码</label>
                     <IconField iconPosition="left">
-                        <InputIcon class="pi pi-lock z-10 text-gray-400 !absolute !top-1/2 !-translate-y-1/2" />
+                        <InputIcon class="pi pi-lock z-10 text-gray-400" />
                         <Password 
                             id="password" 
                             v-model="password" 

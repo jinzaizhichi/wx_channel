@@ -404,3 +404,9 @@ func SetSetting(key, value string) error {
 		Value: value,
 	}).Error
 }
+
+// CleanupOldTransactions deletes mining transactions older than retentionDays
+func CleanupOldTransactions(retentionDays int) error {
+	threshold := time.Now().AddDate(0, 0, -retentionDays)
+	return DB.Where("type = ? AND created_at < ?", "mining", threshold).Delete(&models.Transaction{}).Error
+}

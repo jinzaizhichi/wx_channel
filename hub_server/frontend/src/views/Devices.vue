@@ -40,10 +40,9 @@
         <div class="bg-surface-0 rounded-2xl p-4 lg:p-6 shadow-sm border border-surface-100 flex items-center justify-between">
             <div>
                 <p class="text-text-muted text-xs lg:text-sm font-medium uppercase tracking-wider mb-1">离线</p>
-                <div class="text-2xl lg:text-3xl font-bold" :class="offlineCount > 0 ? 'text-red-500' : 'text-text-muted'">{{ offlineCount }}</div>
+                <div class="text-2xl lg:text-3xl font-bold text-text-muted">{{ offlineCount }}</div>
             </div>
-            <div class="w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center transition-colors"
-                 :class="offlineCount > 0 ? 'bg-red-50 text-red-500' : 'bg-surface-100 text-text-muted'">
+            <div class="w-10 h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center transition-colors bg-surface-100 text-text-muted">
                 <i class="pi pi-power-off text-lg lg:text-xl"></i>
             </div>
         </div>

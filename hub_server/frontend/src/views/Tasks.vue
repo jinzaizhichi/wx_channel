@@ -532,5 +532,68 @@ const getStatusBannerClass = (status) => {
     padding: 0;
 }
 
+
+/* ToggleSwitch Overrides */
+:deep(.p-toggleswitch) {
+    --p-toggleswitch-border-width: 0px;
+    --p-toggleswitch-border-color: transparent;
+    --p-toggleswitch-background: var(--p-surface-300);
+    --p-toggleswitch-transition-duration: 0.2s;
+    --p-toggleswitch-border-radius: 30px;
+    --p-toggleswitch-shadow: none;
+    
+    --p-toggleswitch-handle-background: var(--p-surface-0);
+    --p-toggleswitch-handle-color: var(--p-text-color);
+    --p-toggleswitch-handle-size: 0.75rem; 
+    --p-toggleswitch-gap: 2px;
+    --p-toggleswitch-handle-border-radius: 50%;
+    --p-toggleswitch-slide-duration: 0.2s;
+    
+    position: relative;
+    display: inline-block;
+}
+
+:deep(.p-toggleswitch.p-toggleswitch-checked) {
+    --p-toggleswitch-background: var(--p-primary-color);
+}
+
+:deep(.p-toggleswitch-slider) {
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    border-width: var(--p-toggleswitch-border-width);
+    border-style: solid;
+    border-color: var(--p-toggleswitch-border-color);
+    background: var(--p-toggleswitch-background);
+    transition: background var(--p-toggleswitch-transition-duration), color var(--p-toggleswitch-transition-duration), border-color var(--p-toggleswitch-transition-duration), outline-color var(--p-toggleswitch-transition-duration), box-shadow var(--p-toggleswitch-transition-duration);
+    border-radius: var(--p-toggleswitch-border-radius);
+    outline-color: transparent;
+    box-shadow: var(--p-toggleswitch-shadow);
+    position: relative;
+}
+
+:deep(.p-toggleswitch-handle) {
+    position: absolute;
+    top: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--p-toggleswitch-handle-background);
+    color: var(--p-toggleswitch-handle-color);
+    width: var(--p-toggleswitch-handle-size);
+    height: var(--p-toggleswitch-handle-size);
+    inset-inline-start: var(--p-toggleswitch-gap);
+    margin-block-start: calc(-1 * calc(var(--p-toggleswitch-handle-size) / 2));
+    border-radius: var(--p-toggleswitch-handle-border-radius);
+    transition: background var(--p-toggleswitch-transition-duration), color var(--p-toggleswitch-transition-duration), inset-inline-start var(--p-toggleswitch-slide-duration), box-shadow var(--p-toggleswitch-slide-duration);
+}
+
+:deep(.p-toggleswitch.p-toggleswitch-checked .p-toggleswitch-handle) {
+    inset-inline-start: calc(100% - var(--p-toggleswitch-handle-size) - var(--p-toggleswitch-gap));
+}
+
+.dark :deep(.p-toggleswitch) {
+     --p-toggleswitch-background: var(--p-surface-700);
+}
 </style>
 

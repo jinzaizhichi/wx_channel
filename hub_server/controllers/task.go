@@ -80,7 +80,20 @@ func RemoteCall(hub *ws.Hub) http.HandlerFunc {
 		case "search_channels", "search_videos":
 			cost = 1
 		case "download_video":
-			cost = 10 // TODO: Dynamic cost based on resolution?
+			cost = 10
+		case "api_call":
+			// Check specific API calls for browsing cost
+			var apiData struct {
+				Key string `json:"key"`
+			}
+			if err := json.Unmarshal(req.Data, &apiData); err == nil {
+				switch apiData.Key {
+				case "key:channels:feed_profile": // Video Detail
+					cost = 1
+				case "key:channels:feed_list": // User Profile / Channel Feed
+					cost = 1
+				}
+			}
 		}
 
 		if cost > 0 {

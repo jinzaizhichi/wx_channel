@@ -3,9 +3,11 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"wx_channel/hub_server/database"
 	"wx_channel/hub_server/middleware"
+	"wx_channel/hub_server/models"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -103,5 +105,38 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"code":    0,
 		"message": "密码修改成功",
+	})
+}
+
+// GetTransactions returns the transaction history for the current user
+func GetTransactions(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value(middleware.ContextKeyUserID).(uint)
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	pageSize := 20
+
+	var transactions []models.Transaction
+	var total int64
+
+	database.DB.Model(&models.Transaction{}).Where("user_id = ?", userID).Count(&total)
+	if err := database.DB.Where("user_id = ?", userID).
+		Order("created_at desc").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&transactions).Error; err != nil {
+		http.Error(w, "Failed to fetch transactions", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"code": 0,
+		"data": map[string]interface{}{
+			"list":  transactions,
+			"total": total,
+			"page":  page,
+		},
 	})
 }

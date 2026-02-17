@@ -32,10 +32,11 @@ const router = createRouter({
             component: () => import('../views/Search.vue'),
             meta: { requiresAuth: true, layout: 'Sidebar' }
         },
+
         {
-            path: '/profile',
-            name: 'Profile',
-            component: () => import('../views/Profile.vue'),
+            path: '/settings',
+            name: 'Settings',
+            component: () => import('../views/Settings.vue'),
             meta: { requiresAuth: true, layout: 'Sidebar' }
         },
         {

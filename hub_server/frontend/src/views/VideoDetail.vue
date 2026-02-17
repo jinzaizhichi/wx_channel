@@ -184,7 +184,7 @@
                         :key="index"
                         @click="switchResolution(spec)"
                         class="w-full flex items-center justify-between px-3 py-2.5 lg:px-4 lg:py-3 rounded-xl border transition-all text-left group"
-                        :class="currentSpec === spec ? 'border-primary bg-primary-50' : 'border-surface-100 hover:border-primary hover:bg-surface-50'"
+                        :class="currentSpec === spec ? 'border-primary bg-primary-60 dark:bg-transparent' : 'border-surface-100 dark:border-surface-800 hover:border-primary hover:bg-surface-50 dark:hover:bg-surface-800'"
                     >
                         <div class="flex flex-col">
                             <span class="font-medium text-xs lg:text-sm text-text group-hover:text-primary">

@@ -40,9 +40,9 @@
                     <div class="px-3 py-2 border-b border-surface-100 mb-2 md:hidden">
                          <p class="text-sm font-bold truncate">{{ user?.email }}</p>
                     </div>
-                    <router-link to="/profile" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-50 text-text transition-colors" @click="userMenuVisible = false">
+                    <router-link to="/settings" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-surface-50 text-text transition-colors" @click="userMenuVisible = false">
                         <i class="pi pi-user"></i>
-                        <span>个人资料</span>
+                        <span>个人中心</span>
                     </router-link>
                      <button @click="handleLogout" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors text-left">
                         <i class="pi pi-sign-out"></i>
@@ -110,11 +110,14 @@ const pageTitle = computed(() => {
     '/devices': '设备管理',
     '/tasks': '任务追踪',
     '/monitoring': '系统监控',
-    '/profile': '个人资料',
+    '/settings': '个人中心',
     '/admin': '系统管理'
   }
   if (route.path.includes('/subscriptions/') && route.path.includes('/videos')) {
     return '订阅视频'
+  }
+  if (route.path.includes('/nodes/')) {
+      return '终端详情'
   }
   return titles[route.path] || '控制面板'
 })
@@ -127,7 +130,7 @@ const pageDescription = computed(() => {
     '/devices': '管理您绑定的所有设备',
     '/tasks': '查看和管理任务执行状态',
     '/monitoring': '实时监控系统运行状态',
-    '/profile': '查看和编辑个人信息',
+    '/settings': '管理您的账户信息、安全设置及偏好',
     '/admin': '管理用户和系统资源'
   }
   if (route.path.includes('/subscriptions/') && route.path.includes('/videos')) {
@@ -135,6 +138,7 @@ const pageDescription = computed(() => {
   }
   return descriptions[route.path] || '欢迎使用 Hub Control'
 })
+
 
 // User Menu Logic
 const userMenuVisible = ref(false)

@@ -87,6 +87,7 @@ func main() {
 	auth.HandleFunc("/api/auth/profile", controllers.GetProfile).Methods("GET")
 	auth.HandleFunc("/api/user/change-password", controllers.ChangePassword).Methods("POST")
 	auth.HandleFunc("/api/user/stats", controllers.GetUserStats).Methods("GET")
+	auth.HandleFunc("/api/user/transactions", controllers.GetTransactions).Methods("GET")
 
 	// Device
 	auth.HandleFunc("/api/device/bind_token", controllers.GenerateBindToken).Methods("POST")

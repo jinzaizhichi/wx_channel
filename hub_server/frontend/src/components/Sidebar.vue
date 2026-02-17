@@ -86,7 +86,7 @@ const items = computed(() => {
         {
             label: 'Settings',
             items: [
-                { label: '个人资料', icon: 'pi pi-user', route: '/profile' }
+                { label: '个人中心', icon: 'pi pi-user', route: '/settings' }
             ]
         }
     ]
