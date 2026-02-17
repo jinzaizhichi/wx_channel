@@ -226,7 +226,7 @@
                     </div>
                 </template>
 
-                <Column field="id" header="客户端 ID" style="width: 160px">
+                <Column field="id" header="客户端 ID" style="width: 200px">
                     <template #body="{ data }">
                         <span class="font-mono text-xs text-text-muted px-2 py-1 bg-surface-100 rounded-lg" :title="data.id">{{ data.id.substring(0, 16) }}...</span>
                     </template>
@@ -598,7 +598,7 @@ onUnmounted(() => {
 <style scoped>
 /* WebSocket DataTable Styling */
 :deep(.ws-table .p-datatable-thead > tr > th) {
-    background-color: var(--p-surface-50);
+    background-color: var(--color-surface-50);
     color: var(--p-text-muted-color);
     font-weight: 600;
     font-size: 0.7rem;
@@ -617,6 +617,6 @@ onUnmounted(() => {
     border-bottom: none;
 }
 :deep(.ws-table .p-datatable-tbody > tr:hover > td) {
-    background-color: var(--p-surface-50) !important;
+    background-color: var(--color-surface-50) !important;
 }
 </style>

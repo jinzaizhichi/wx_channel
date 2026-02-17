@@ -64,7 +64,7 @@
             <h3 class="text-xl lg:text-2xl font-bold text-text mb-3">无法连接到视频号页面</h3>
             <p class="text-text-muted mb-8 lg:text-lg">请确保您的微信视频号页面处于打开且激活状态。</p>
             
-            <div class="bg-white border border-slate-100 rounded-3xl p-6 lg:p-8 text-left w-full mb-8 shadow-card">
+            <div class="bg-surface-0 border border-slate-100 rounded-3xl p-6 lg:p-8 text-left w-full mb-8 shadow-card">
                 <h4 class="font-bold text-text mb-4">解决方案：</h4>
                 <ol class="list-decimal list-inside space-y-3 text-text-muted text-sm lg:text-base">
                     <li>在浏览器中打开 <strong class="text-text">微信视频号</strong> 页面。</li>
@@ -81,7 +81,7 @@
         
         <!-- Video Grid -->
         <div v-else-if="videos.length > 0" class="flex flex-col gap-4 lg:gap-6">
-          <div v-for="video in videos" :key="video.id" class="p-4 lg:p-6 rounded-2xl lg:rounded-3xl bg-white shadow-card border border-slate-100 flex flex-col md:flex-row gap-4 lg:gap-6 transition-all hover:shadow-lg hover:-translate-y-0.5 group">
+          <div v-for="video in videos" :key="video.id" class="p-4 lg:p-6 rounded-2xl lg:rounded-3xl bg-surface-0 shadow-card border border-surface-100 flex flex-col md:flex-row gap-4 lg:gap-6 transition-all hover:shadow-lg hover:-translate-y-0.5 group">
             <!-- Video Thumbnail -->
             <div class="relative w-full md:w-56 aspect-video shrink-0 rounded-xl lg:rounded-2xl overflow-hidden shadow-inner bg-slate-100 cursor-pointer" @click="playVideo(video)">
                <img :src="video.coverUrl" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" @error="onImgError">
@@ -142,7 +142,7 @@
         </div>
         
         <!-- Empty State -->
-        <div v-else class="text-center p-8 lg:p-16 text-text-muted bg-white rounded-[2rem] shadow-card">
+        <div v-else class="text-center p-8 lg:p-16 text-text-muted bg-surface-0 rounded-[2rem] shadow-card">
             <Video class="w-12 h-12 lg:w-16 lg:h-16 mx-auto mb-4 text-text-muted/30" />
             <p class="text-base lg:text-lg font-medium mb-2">暂无视频动态</p>
             <p class="text-xs lg:text-sm">该用户还没有发布任何视频</p>
@@ -151,7 +151,7 @@
     
     <!-- Video Player Modal -->
     <div v-if="playerUrl" class="fixed inset-0 z-50 flex justify-center items-center bg-black/80 backdrop-blur-md p-4" @click="closePlayer">
-      <div class="w-full max-w-5xl bg-white rounded-2xl lg:rounded-3xl shadow-card border border-slate-100 p-4 lg:p-6" @click.stop>
+      <div class="w-full max-w-5xl bg-surface-0 rounded-2xl lg:rounded-3xl shadow-card border border-surface-100 p-4 lg:p-6" @click.stop>
         <div class="flex justify-between items-center mb-4">
           <h3 class="font-serif font-bold text-lg lg:text-xl text-text truncate pr-4">{{ currentVideo?.title || '视频预览' }}</h3>
           <button class="w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-bg shadow-neu-btn flex items-center justify-center text-text hover:text-red-500 active:shadow-neu-btn-active transition-all text-xl lg:text-2xl leading-none" @click="closePlayer">×</button>

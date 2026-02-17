@@ -497,7 +497,7 @@ const getStatusBannerClass = (status) => {
     border-radius: 0;
 }
 :deep(.p-datatable-thead > tr > th) {
-    background-color: var(--p-surface-50);
+    background-color: var(--color-surface-50);
     color: var(--p-text-muted-color);
     font-weight: 600;
     font-size: 0.75rem;
@@ -516,13 +516,13 @@ const getStatusBannerClass = (status) => {
     border-bottom: none;
 }
 :deep(.p-datatable-tbody > tr:hover > td) {
-    background-color: var(--p-surface-50) !important;
+    background-color: var(--color-surface-50) !important;
 }
 :deep(.p-datatable .p-datatable-tbody > tr.p-datatable-row-odd) {
     background-color: transparent;
 }
 :deep(.p-datatable .p-datatable-tbody > tr.p-datatable-row-odd:hover > td) {
-    background-color: var(--p-surface-50) !important;
+    background-color: var(--color-surface-50) !important;
 }
 
 /* Paginator Overrides */

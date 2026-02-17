@@ -82,7 +82,7 @@
                          
                          <!-- Play Icon Overlay -->
                          <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[2px] bg-black/10">
-                             <div class="bg-white/90 text-primary p-4 rounded-full shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+                             <div class="bg-surface-0 text-primary p-4 rounded-full shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
                                  <i class="pi pi-play text-2xl fill-current"></i>
                              </div>
                          </div>

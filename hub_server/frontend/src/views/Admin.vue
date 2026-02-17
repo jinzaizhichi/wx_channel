@@ -638,7 +638,7 @@ const confirmDeleteSubscription = (sub) => {
 <style scoped>
 /* DataTable Styling */
 :deep(.admin-table .p-datatable-thead > tr > th) {
-    background-color: var(--p-surface-50);
+    background-color: var(--color-surface-50);
     color: var(--p-text-muted-color);
     font-weight: 600;
     font-size: 0.75rem;
@@ -657,7 +657,7 @@ const confirmDeleteSubscription = (sub) => {
     border-bottom: none;
 }
 :deep(.admin-table .p-datatable-tbody > tr:hover > td) {
-    background-color: var(--p-surface-50) !important;
+    background-color: var(--color-surface-50) !important;
 }
 :deep(.admin-table .p-datatable-tbody > tr.p-datatable-row-odd) {
     background-color: transparent;

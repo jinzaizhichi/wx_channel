@@ -24,6 +24,9 @@
             <p class="text-sm font-medium text-text">{{ user?.username || user?.email || 'Guest' }}</p>
             <Tag :value="user?.role" :severity="user?.role === 'admin' ? 'warn' : 'info'" class="scale-90" rounded></Tag>
           </div>
+
+          <!-- Dark Mode Toggle -->
+          <DarkModeToggle />
           
            <!-- User Profile -->
            <!-- User Menu Backdrop -->
@@ -62,6 +65,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SidebarComponent from '../components/Sidebar.vue'
+import DarkModeToggle from '../components/DarkModeToggle.vue'
 import { useUserStore } from '../store/user'
 import Avatar from 'primevue/avatar'
 import Tag from 'primevue/tag'

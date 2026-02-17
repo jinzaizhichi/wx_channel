@@ -45,18 +45,49 @@
   --shadow-neu-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --shadow-neu-pressed: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
   --shadow-neu-btn: 0 4px 6px -1px rgba(var(--p-primary-rgb), 0.4), 0 2px 4px -1px rgba(var(--p-primary-rgb), 0.2);
+  /* Dark Mode Overrides */
   --shadow-neu-btn-active: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
 }
 
-.p-component {
-  font-family: var(--font-sans);
+:root.dark {
+  /* Override surface colors for dark mode */
+  --color-surface-0: var(--p-surface-900);
+  --color-surface-50: var(--p-surface-950);
+  --color-surface-100: var(--p-surface-800);
+  --color-surface-200: var(--p-surface-700);
+  --color-surface-300: var(--p-surface-600);
+  --color-surface-400: var(--p-surface-500);
+  --color-surface-500: var(--p-surface-400);
+  --color-surface-600: var(--p-surface-300);
+  --color-surface-700: var(--p-surface-200);
+  --color-surface-800: var(--p-surface-100);
+  --color-surface-900: var(--p-surface-50);
+  --color-surface-950: var(--p-surface-0);
+
+  --color-bg: var(--p-surface-950);
+  --color-text: var(--p-surface-0);
+  --color-text-muted: var(--p-surface-400);
+  --color-card-bg: var(--p-surface-900);
+
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px -1px rgba(0, 0, 0, 0.5);
+  --shadow-card-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
+  --shadow-neu: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-neu-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+
+  /* Adjust dot pattern for dark mode */
+  --bg-pattern-color: var(--p-surface-900);
+  --bg-pattern-dot: var(--p-surface-800);
 }
 
-/* Subtle dot-grid background pattern */
+/* Update bg-pattern to use variables */
 .bg-pattern {
   background-color: var(--color-bg);
   background-image: radial-gradient(circle, var(--p-surface-200) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+:root.dark .bg-pattern {
+  background-image: radial-gradient(circle, var(--p-surface-800) 1px, transparent 1px);
 }
 
 /* Unified card styling */

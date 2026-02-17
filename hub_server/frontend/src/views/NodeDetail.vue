@@ -6,7 +6,7 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="!node" class="p-8 lg:p-12 text-center bg-white rounded-[2rem] shadow-card">
+    <div v-else-if="!node" class="p-8 lg:p-12 text-center bg-surface-0 rounded-[2rem] shadow-card">
       <p class="text-text-muted mb-4">节点不存在或已删除</p>
       <button 
         class="px-6 py-3 rounded-xl bg-bg shadow-neu-btn text-text font-semibold hover:text-primary active:shadow-neu-btn-active transition-all"
@@ -41,19 +41,19 @@
 
       <!-- Stats Grid -->
       <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-8 lg:mb-12">
-        <div class="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-card border border-slate-100">
+        <div class="bg-surface-0 rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-card border border-surface-100">
           <div class="text-[10px] lg:text-xs uppercase tracking-wider text-text-muted mb-1 lg:mb-2">IP 地址</div>
           <div class="text-sm lg:text-lg font-semibold text-text truncate" :title="node.ip">{{ node.ip || 'Unknown' }}</div>
         </div>
-        <div class="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-card border border-slate-100">
+        <div class="bg-surface-0 rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-card border border-surface-100">
           <div class="text-[10px] lg:text-xs uppercase tracking-wider text-text-muted mb-1 lg:mb-2">客户端版本</div>
           <div class="text-sm lg:text-lg font-semibold text-text truncate">{{ node.version }}</div>
         </div>
-        <div class="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-card border border-slate-100">
+        <div class="bg-surface-0 rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-card border border-surface-100">
           <div class="text-[10px] lg:text-xs uppercase tracking-wider text-text-muted mb-1 lg:mb-2">首次发现</div>
           <div class="text-xs lg:text-sm font-semibold text-text truncate">{{ formatTime(node.created_at) }}</div>
         </div>
-        <div class="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-card border border-slate-100">
+        <div class="bg-surface-0 rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-card border border-surface-100">
           <div class="text-[10px] lg:text-xs uppercase tracking-wider text-text-muted mb-1 lg:mb-2">最近心跳</div>
           <div class="text-xs lg:text-sm font-semibold text-text truncate">{{ formatTime(node.last_seen) }}</div>
         </div>
@@ -65,7 +65,7 @@
       </div>
 
       <!-- Task Table -->
-      <div class="bg-white rounded-xl lg:rounded-2xl shadow-card border border-slate-100 overflow-hidden">
+      <div class="bg-surface-0 rounded-xl lg:rounded-2xl shadow-card border border-surface-100 overflow-hidden">
         <div class="overflow-x-auto custom-scrollbar">
           <table class="w-full whitespace-nowrap">
             <thead>
