@@ -48,7 +48,8 @@ type Config struct {
 	// 并发与限流
 	UploadChunkConcurrency int           `mapstructure:"upload_chunk_concurrency"`
 	UploadMergeConcurrency int           `mapstructure:"upload_merge_concurrency"`
-	DownloadConcurrency    int           `mapstructure:"download_concurrency"`
+	DownloadConcurrency    int           `mapstructure:"download_concurrency"`    // 批量下载并发数（同时下载几个文件）
+	DownloadConnections    int           `mapstructure:"download_connections"`    // 单文件多线程连接数（每个文件用几个线程）
 	DownloadRetryCount     int           `mapstructure:"download_retry_count"`
 	DownloadResumeEnabled  bool          `mapstructure:"download_resume_enabled"`
 	DownloadTimeout        time.Duration `mapstructure:"download_timeout"`
@@ -197,7 +198,8 @@ func setDefaults() {
 
 	viper.SetDefault("upload_chunk_concurrency", 4)
 	viper.SetDefault("upload_merge_concurrency", 1)
-	viper.SetDefault("download_concurrency", 5)
+	viper.SetDefault("download_concurrency", 5)    // 批量下载并发数：同时下载5个文件
+	viper.SetDefault("download_connections", 8)    // 单文件连接数：每个文件用8个线程
 	viper.SetDefault("download_retry_count", 3)
 	viper.SetDefault("download_resume_enabled", true)
 	viper.SetDefault("download_timeout", 30*time.Minute)

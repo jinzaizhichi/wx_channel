@@ -1187,7 +1187,14 @@ func (h *UploadHandler) HandleDownloadVideo(Conn *SunnyNet.HttpConn) bool {
 	downloadCtx, downloadCancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer downloadCancel()
 
-	err = h.gopeedService.DownloadSync(downloadCtx, req.VideoURL, tmpPath, onProgress)
+	// 获取单文件连接数配置
+	connections := 8 // 默认值
+	cfg := config.Get()
+	if cfg != nil && cfg.DownloadConnections > 0 {
+		connections = cfg.DownloadConnections
+	}
+
+	err = h.gopeedService.DownloadSync(downloadCtx, req.VideoURL, tmpPath, connections, onProgress)
 	if err != nil {
 		utils.Error("❌ [视频下载] Gopeed 下载失败: %v", err)
 		h.sendErrorResponse(Conn, fmt.Errorf("下载失败: %v", err))

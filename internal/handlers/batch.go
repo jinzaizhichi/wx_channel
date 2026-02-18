@@ -568,11 +568,23 @@ func (h *BatchHandler) downloadVideoOnce(ctx context.Context, task *BatchTask, f
 				if total > 0 {
 					task.SizeMB = fmt.Sprintf("%.2fMB", task.TotalMB)
 				}
+				
+				// 每10%输出一次日志
+				if int(task.Progress)%10 == 0 && task.Progress > 0 {
+					utils.Info("📊 [批量下载] %s 进度: %.1f%% (%.2f/%.2f MB)", 
+						task.Title, task.Progress, task.DownloadedMB, task.TotalMB)
+				}
 			}
 		}
 	}
 
-	err := h.gopeedService.DownloadSync(ctx, task.URL, filePath, onProgress)
+	// 获取单文件连接数配置
+	connections := 8 // 默认值
+	if h.getConfig() != nil && h.getConfig().DownloadConnections > 0 {
+		connections = h.getConfig().DownloadConnections
+	}
+
+	err := h.gopeedService.DownloadSync(ctx, task.URL, filePath, connections, onProgress)
 	if err != nil {
 		return err
 	}
