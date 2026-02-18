@@ -12,6 +12,7 @@ import (
 	"github.com/GopeedLab/gopeed/pkg/base"
 	"github.com/GopeedLab/gopeed/pkg/download"
 	_ "github.com/GopeedLab/gopeed/pkg/protocol/http" // Register HTTP protocol
+	httpProtocol "github.com/GopeedLab/gopeed/pkg/protocol/http"
 )
 
 // GopeedService wraps the Gopeed downloader engine
@@ -76,7 +77,7 @@ func (s *GopeedService) DeleteTask(taskID string) error {
 
 // DownloadSync downloads a file synchronously (blocking until done)
 // Used by BatchHandler to replace existing downloadVideoOnce logic
-func (s *GopeedService) DownloadSync(ctx context.Context, url string, path string, onProgress func(progress float64, downloaded int64, total int64)) error {
+func (s *GopeedService) DownloadSync(ctx context.Context, url string, path string, connections int, onProgress func(progress float64, downloaded int64, total int64)) error {
 	if s.Downloader == nil {
 		return fmt.Errorf("downloader not initialized")
 	}
@@ -85,10 +86,17 @@ func (s *GopeedService) DownloadSync(ctx context.Context, url string, path strin
 	dir := filepath.Dir(path)
 	name := filepath.Base(path)
 
+	// 默认8个连接
+	if connections <= 0 {
+		connections = 8
+	}
+
 	opts := &base.Options{
-		Path: dir,
-		Name: name,
-		// Connections: 8, // Optional defaults
+		Path:  dir,
+		Name:  name,
+		Extra: &httpProtocol.OptsExtra{
+			Connections: connections, // 单文件多线程下载
+		},
 	}
 
 	// Create task using CreateDirect
@@ -131,6 +139,7 @@ func (s *GopeedService) DownloadSync(ctx context.Context, url string, path strin
 					defer func() {
 						if r := recover(); r != nil {
 							// 忽略反射 panic，防止 crash
+							utils.Warn("反射获取文件大小失败: %v", r)
 						}
 					}()
 
@@ -158,6 +167,7 @@ func (s *GopeedService) DownloadSync(ctx context.Context, url string, path strin
 					progress = float64(downloaded) / float64(total)
 				}
 
+				// 调用进度回调
 				onProgress(progress, downloaded, total)
 			}
 
