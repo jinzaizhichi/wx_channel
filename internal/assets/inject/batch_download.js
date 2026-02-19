@@ -874,6 +874,35 @@ async function __batch_download_selected__() {
 
     __wx_log({ msg: '✅ 批量下载已启动，并发数: ' + (data.concurrency || 5) });
 
+    // 等待100ms后立即查询一次进度（避免错过快速完成的下载）
+    await new Promise(function(resolve) { setTimeout(resolve, 100); });
+    
+    // 立即查询一次进度
+    try {
+      var progressRes = await fetch('/__wx_channels_api/batch_progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (progressRes.ok) {
+        var progressData = await progressRes.json();
+        var data = progressData.data || progressData;
+        if (progressData.success || progressData.code === 0 || data.total !== undefined) {
+          var total = data.total || 0;
+          var done = data.done || 0;
+          var failed = data.failed || 0;
+          
+          // 如果已经完成，直接显示结果并返回
+          if (total > 0 && done + failed >= total) {
+            __wx_log({ msg: '✅ 批量下载完成: 成功 ' + done + ' 个, 失败 ' + failed + ' 个' });
+            __reset_batch_download_ui__();
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[批量下载] 初始进度查询失败:', e);
+    }
+
     // 开始轮询进度
     var pollInterval = setInterval(async function() {
       // 检查取消信号
