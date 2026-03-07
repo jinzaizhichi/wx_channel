@@ -33,11 +33,11 @@ func InitDB(path string) error {
 		return err
 	}
 
-	// Critical for SQLite: Limit to 1 open connection to avoid "database is locked" errors
-	// effectively serializing access, which is safer for SQLite.
-	sqlDB.SetMaxOpenConns(1)
-
-	// Migrate the schema
+	// SQLite is in WAL mode, so we can allow concurrent read connections.
+	// We set MaxOpenConns to a reasonable number to handle API requests concurrently without locking up.
+	sqlDB.SetMaxOpenConns(20)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetConnMaxLifetime(time.Hour)
 	err = DB.AutoMigrate(
 		&models.User{},
 		&models.Node{},

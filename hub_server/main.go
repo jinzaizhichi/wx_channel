@@ -1,16 +1,19 @@
 package main
 
 import (
-	"log"
+	"log" // Kept log for log.Fatalf and log.Printf, as its removal would cause compilation errors with existing calls.
 	"net/http"
 	"os"
+	"runtime"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	"wx_channel/hub_server/controllers"
 	"wx_channel/hub_server/database"
 	"wx_channel/hub_server/middleware"
 	"wx_channel/hub_server/services"
+	"wx_channel/hub_server/utils" // Added utils import
 	"wx_channel/hub_server/ws"
 
 	"github.com/gorilla/mux"
@@ -67,11 +70,8 @@ func main() {
 	// 2.6 启动同步服务
 	services.InitSyncService(services.SyncConfig{
 		Enabled:    true,
-		Interval:   5 * 60 * 1000000000, // 5 minutes
-		Token:      "",                   // 从环境变量或配置文件读取
+		Interval:   5 * time.Minute, // 5 分钟
 		MaxRetries: 3,
-		Timeout:    30 * 1000000000, // 30 seconds
-		BatchSize:  1000,
 		Hub:        hub, // 传递 WebSocket Hub 实例
 	})
 
@@ -150,6 +150,11 @@ func main() {
 	admin.HandleFunc("/devices", controllers.GetAllDevices).Methods("GET")
 	admin.HandleFunc("/device/unbind", controllers.AdminUnbindDevice).Methods("POST")
 	admin.HandleFunc("/device/{id}", controllers.AdminDeleteDevice).Methods("DELETE")
+
+	// Database Management
+	admin.HandleFunc("/database/stats", controllers.GetDatabaseStats).Methods("GET")
+	admin.HandleFunc("/database/optimize", controllers.OptimizeDatabase).Methods("POST")
+	admin.HandleFunc("/database/archive", controllers.ArchiveOldData).Methods("POST")
 	admin.HandleFunc("/tasks", controllers.GetAllTasks).Methods("GET")
 	admin.HandleFunc("/task/{id}", controllers.AdminDeleteTask).Methods("DELETE")
 	admin.HandleFunc("/subscriptions", controllers.GetAllSubscriptions).Methods("GET")
@@ -176,6 +181,13 @@ func main() {
 		fs.ServeHTTP(w, r)
 	})
 
-	log.Println("Hub Server started on :8080")
+	// System optimization
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	// API 层和下载引擎频繁申请/释放大量小规模对象，为了缓解 GC 抖动，
+	// 适当放宽 GC 回收条件。牺牲小部分内存，换取平稳的高负载表现
+	debug.SetGCPercent(200)
+
+	utils.LogInfo("Starting Hub Server...")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
