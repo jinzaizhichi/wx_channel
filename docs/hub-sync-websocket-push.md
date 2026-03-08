@@ -413,9 +413,9 @@ SELECT * FROM sync_status;
 ## 开发优先级
 
 - [x] Hub Server 端基础架构
-- [ ] 客户端同步推送器实现
-- [ ] Hub Server 消息处理完善
-- [ ] 配置选项添加
+- [x] 客户端同步推送器实现
+- [x] Hub Server 消息处理完善
+- [x] 配置选项添加
 - [ ] 测试和调试
 - [ ] 文档完善
 

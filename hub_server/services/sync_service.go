@@ -1,11 +1,8 @@
 package services
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 	"wx_channel/hub_server/database"
@@ -17,8 +14,6 @@ import (
 // SyncService 同步服务
 type SyncService struct {
 	db           *gorm.DB
-	httpClient   *http.Client
-	syncToken    string
 	syncInterval time.Duration
 	maxRetries   int
 	running      bool
@@ -28,13 +23,10 @@ type SyncService struct {
 
 // SyncConfig 同步配置
 type SyncConfig struct {
-	Enabled      bool          `json:"enabled"`
-	Interval     time.Duration `json:"interval"`
-	Token        string        `json:"token"`
-	MaxRetries   int           `json:"max_retries"`
-	Timeout      time.Duration `json:"timeout"`
-	BatchSize    int           `json:"batch_size"`
-	Hub          interface{}   `json:"-"` // WebSocket Hub
+	Enabled    bool          `json:"enabled"`
+	Interval   time.Duration `json:"interval"`
+	MaxRetries int           `json:"max_retries"`
+	Hub        interface{}   `json:"-"` // WebSocket Hub
 }
 
 var globalSyncService *SyncService
@@ -42,11 +34,7 @@ var globalSyncService *SyncService
 // NewSyncService 创建同步服务
 func NewSyncService(config SyncConfig) *SyncService {
 	return &SyncService{
-		db: database.DB,
-		httpClient: &http.Client{
-			Timeout: config.Timeout,
-		},
-		syncToken:    config.Token,
+		db:           database.DB,
 		syncInterval: config.Interval,
 		maxRetries:   config.MaxRetries,
 		stopChan:     make(chan struct{}),
@@ -112,9 +100,10 @@ func (s *SyncService) syncAllDevices() {
 	}
 }
 
-// SyncDevice 同步单个设备
+// SyncDevice 同步单个设备（仅用于 WebSocket 推送模式）
+// 注意：此方法现在只是更新同步状态，实际数据由客户端主动推送
 func (s *SyncService) SyncDevice(machineID string) error {
-	log.Printf("[SyncService] Syncing device: %s", machineID)
+	log.Printf("[SyncService] Checking sync status for device: %s", machineID)
 
 	// 获取设备信息
 	node, err := database.GetNodeByID(machineID)
@@ -127,294 +116,51 @@ func (s *SyncService) SyncDevice(machineID string) error {
 		return fmt.Errorf("device is offline")
 	}
 
-	// 获取或创建同步状态
-	syncStatus, err := s.getOrCreateSyncStatus(machineID)
-	if err != nil {
-		return fmt.Errorf("failed to get sync status: %w", err)
-	}
-
-	// 更新状态为同步中
-	syncStatus.LastSyncStatus = "in_progress"
-	s.db.Save(syncStatus)
-
-	// 优先尝试 WebSocket 反向同步（适用于 NAT 后的客户端）
-	if s.hub != nil {
-		log.Printf("[SyncService] Attempting WebSocket sync for device: %s", machineID)
-		wsErr := s.syncViaWebSocket(node, syncStatus)
-		if wsErr == nil {
-			// WebSocket 同步成功
-			syncStatus.LastSyncStatus = "success"
-			syncStatus.LastSyncError = ""
-			s.db.Save(syncStatus)
-			log.Printf("[SyncService] WebSocket sync completed for device: %s", machineID)
-			return nil
-		}
-		log.Printf("[SyncService] WebSocket sync failed, falling back to HTTP: %v", wsErr)
-	}
-
-	// 回退到 HTTP 拉取模式
-	// 同步浏览记录
-	browseErr := s.syncBrowseHistory(node, syncStatus)
-	if browseErr != nil {
-		log.Printf("[SyncService] Failed to sync browse history for %s: %v", machineID, browseErr)
-	}
-
-	// 同步下载记录
-	downloadErr := s.syncDownloadRecords(node, syncStatus)
-	if downloadErr != nil {
-		log.Printf("[SyncService] Failed to sync download records for %s: %v", machineID, downloadErr)
-	}
-
-	// 更新同步状态
-	if browseErr != nil || downloadErr != nil {
-		syncStatus.LastSyncStatus = "failed"
-		if browseErr != nil {
-			syncStatus.LastSyncError = browseErr.Error()
-		} else {
-			syncStatus.LastSyncError = downloadErr.Error()
-		}
-	} else {
-		syncStatus.LastSyncStatus = "success"
-		syncStatus.LastSyncError = ""
-	}
-
-	s.db.Save(syncStatus)
-
-	log.Printf("[SyncService] Sync completed for device: %s (status: %s)", machineID, syncStatus.LastSyncStatus)
+	// WebSocket 推送模式：客户端会主动推送数据
+	// 这里只记录检查时间
+	log.Printf("[SyncService] Device %s is online, waiting for client push", machineID)
+	
 	return nil
-}
-
-// syncBrowseHistory 同步浏览记录
-func (s *SyncService) syncBrowseHistory(node *models.Node, syncStatus *models.SyncStatus) error {
-	// 构建请求 URL
-	baseURL := s.getNodeAPIURL(node)
-	url := fmt.Sprintf("%s/api/sync/browse", baseURL)
-	if syncStatus.LastBrowseSyncTime.IsZero() {
-		url += "?limit=1000"
-	} else {
-		url += fmt.Sprintf("?since=%s&limit=1000", syncStatus.LastBrowseSyncTime.Format(time.RFC3339))
-	}
-
-	// 发送请求
-	records, err := s.fetchBrowseRecords(url)
-	if err != nil {
-		s.recordSyncHistory(node.ID, "browse", 0, "failed", err.Error())
-		return err
-	}
-
-	if len(records) == 0 {
-		log.Printf("[SyncService] No new browse records for device: %s", node.ID)
-		return nil
-	}
-
-	// 保存记录
-	savedCount := 0
-	for _, record := range records {
-		hubRecord := &models.HubBrowseHistory{
-			ID:              record.ID,
-			MachineID:       node.ID,
-			Title:           record.Title,
-			Author:          record.Author,
-			AuthorID:        record.AuthorID,
-			Duration:        record.Duration,
-			Size:            record.Size,
-			Resolution:      record.Resolution,
-			CoverURL:        record.CoverURL,
-			VideoURL:        record.VideoURL,
-			DecryptKey:      record.DecryptKey,
-			BrowseTime:      record.BrowseTime,
-			LikeCount:       record.LikeCount,
-			CommentCount:    record.CommentCount,
-			FavCount:        record.FavCount,
-			ForwardCount:    record.ForwardCount,
-			PageURL:         record.PageURL,
-			SourceCreatedAt: record.CreatedAt,
-			SourceUpdatedAt: record.UpdatedAt,
-			SyncedAt:        time.Now(),
-		}
-
-		// 使用 FirstOrCreate 避免重复
-		result := s.db.Where("id = ? AND machine_id = ?", hubRecord.ID, hubRecord.MachineID).
-			FirstOrCreate(hubRecord)
-		
-		if result.Error == nil && result.RowsAffected > 0 {
-			savedCount++
-		}
-	}
-
-	// 更新同步状态
-	syncStatus.LastBrowseSyncTime = time.Now()
-	syncStatus.BrowseRecordCount += int64(savedCount)
-
-	// 记录同步历史
-	s.recordSyncHistory(node.ID, "browse", savedCount, "success", "")
-
-	log.Printf("[SyncService] Synced %d browse records for device: %s", savedCount, node.ID)
-	return nil
-}
-
-// syncDownloadRecords 同步下载记录
-func (s *SyncService) syncDownloadRecords(node *models.Node, syncStatus *models.SyncStatus) error {
-	// 构建请求 URL
-	baseURL := s.getNodeAPIURL(node)
-	url := fmt.Sprintf("%s/api/sync/download", baseURL)
-	if syncStatus.LastDownloadSyncTime.IsZero() {
-		url += "?limit=1000"
-	} else {
-		url += fmt.Sprintf("?since=%s&limit=1000", syncStatus.LastDownloadSyncTime.Format(time.RFC3339))
-	}
-
-	// 发送请求
-	records, err := s.fetchDownloadRecords(url)
-	if err != nil {
-		s.recordSyncHistory(node.ID, "download", 0, "failed", err.Error())
-		return err
-	}
-
-	if len(records) == 0 {
-		log.Printf("[SyncService] No new download records for device: %s", node.ID)
-		return nil
-	}
-
-	// 保存记录
-	savedCount := 0
-	for _, record := range records {
-		hubRecord := &models.HubDownloadRecord{
-			ID:              record.ID,
-			MachineID:       node.ID,
-			VideoID:         record.VideoID,
-			Title:           record.Title,
-			Author:          record.Author,
-			CoverURL:        record.CoverURL,
-			Duration:        record.Duration,
-			FileSize:        record.FileSize,
-			FilePath:        record.FilePath,
-			Format:          record.Format,
-			Resolution:      record.Resolution,
-			Status:          record.Status,
-			DownloadTime:    record.DownloadTime,
-			ErrorMessage:    record.ErrorMessage,
-			LikeCount:       record.LikeCount,
-			CommentCount:    record.CommentCount,
-			ForwardCount:    record.ForwardCount,
-			FavCount:        record.FavCount,
-			SourceCreatedAt: record.CreatedAt,
-			SourceUpdatedAt: record.UpdatedAt,
-			SyncedAt:        time.Now(),
-		}
-
-		// 使用 FirstOrCreate 避免重复
-		result := s.db.Where("id = ? AND machine_id = ?", hubRecord.ID, hubRecord.MachineID).
-			FirstOrCreate(hubRecord)
-		
-		if result.Error == nil && result.RowsAffected > 0 {
-			savedCount++
-		}
-	}
-
-	// 更新同步状态
-	syncStatus.LastDownloadSyncTime = time.Now()
-	syncStatus.DownloadRecordCount += int64(savedCount)
-
-	// 记录同步历史
-	s.recordSyncHistory(node.ID, "download", savedCount, "success", "")
-
-	log.Printf("[SyncService] Synced %d download records for device: %s", savedCount, node.ID)
-	return nil
-}
-
-// fetchBrowseRecords 从客户端获取浏览记录
-func (s *SyncService) fetchBrowseRecords(url string) ([]BrowseRecord, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// 添加同步令牌
-	if s.syncToken != "" {
-		req.Header.Set("X-Sync-Token", s.syncToken)
-	}
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
-	}
-
-	var response struct {
-		Code    int            `json:"code"`
-		Message string         `json:"message"`
-		Data    struct {
-			Records []BrowseRecord `json:"records"`
-		} `json:"data"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, err
-	}
-
-	if response.Code != 0 {
-		return nil, fmt.Errorf("API error: %s", response.Message)
-	}
-
-	return response.Data.Records, nil
-}
-
-// fetchDownloadRecords 从客户端获取下载记录
-func (s *SyncService) fetchDownloadRecords(url string) ([]DownloadRecord, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// 添加同步令牌
-	if s.syncToken != "" {
-		req.Header.Set("X-Sync-Token", s.syncToken)
-	}
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
-	}
-
-	var response struct {
-		Code    int             `json:"code"`
-		Message string          `json:"message"`
-		Data    struct {
-			Records []DownloadRecord `json:"records"`
-		} `json:"data"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, err
-	}
-
-	if response.Code != 0 {
-		return nil, fmt.Errorf("API error: %s", response.Message)
-	}
-
-	return response.Data.Records, nil
 }
 
 // getOrCreateSyncStatus 获取或创建同步状态
 func (s *SyncService) getOrCreateSyncStatus(machineID string) (*models.SyncStatus, error) {
 	var status models.SyncStatus
-	result := s.db.Where("machine_id = ?", machineID).FirstOrCreate(&status, models.SyncStatus{
+	
+	// 先尝试查找
+	err := s.db.Where("machine_id = ?", machineID).First(&status).Error
+	if err == nil {
+		// 找到了，直接返回
+		return &status, nil
+	}
+	
+	// 如果是其他错误（不是记录不存在），返回错误
+	if err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+	
+	// 记录不存在，创建新记录
+	status = models.SyncStatus{
 		MachineID:      machineID,
 		LastSyncStatus: "never",
-	})
-	return &status, result.Error
+	}
+	
+	// 使用事务创建，如果失败（可能是并发创建），再次查询
+	err = s.db.Create(&status).Error
+	if err != nil {
+		// 如果是唯一约束冲突，说明其他 goroutine 已经创建了，再次查询
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") || 
+		   strings.Contains(err.Error(), "Duplicate entry") {
+			err = s.db.Where("machine_id = ?", machineID).First(&status).Error
+			if err != nil {
+				return nil, fmt.Errorf("failed to get sync status after conflict: %w", err)
+			}
+			return &status, nil
+		}
+		return nil, err
+	}
+	
+	return &status, nil
 }
 
 // recordSyncHistory 记录同步历史
@@ -431,48 +177,50 @@ func (s *SyncService) recordSyncHistory(machineID, syncType string, recordsSynce
 }
 
 // BrowseRecord 浏览记录（客户端响应格式）
+// 注意：JSON标签必须与客户端的 database.BrowseRecord 一致（驼峰命名）
 type BrowseRecord struct {
 	ID           string    `json:"id"`
 	Title        string    `json:"title"`
 	Author       string    `json:"author"`
-	AuthorID     string    `json:"author_id"`
-	Duration     int       `json:"duration"`
+	AuthorID     string    `json:"authorId"`      // 驼峰命名
+	Duration     int64     `json:"duration"`      // 改为int64匹配客户端
 	Size         int64     `json:"size"`
 	Resolution   string    `json:"resolution"`
-	CoverURL     string    `json:"cover_url"`
-	VideoURL     string    `json:"video_url"`
-	DecryptKey   string    `json:"decrypt_key"`
-	BrowseTime   time.Time `json:"browse_time"`
-	LikeCount    int       `json:"like_count"`
-	CommentCount int       `json:"comment_count"`
-	FavCount     int       `json:"fav_count"`
-	ForwardCount int       `json:"forward_count"`
-	PageURL      string    `json:"page_url"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	CoverURL     string    `json:"coverUrl"`      // 驼峰命名
+	VideoURL     string    `json:"videoUrl"`      // 驼峰命名
+	DecryptKey   string    `json:"decryptKey"`    // 驼峰命名
+	BrowseTime   time.Time `json:"browseTime"`    // 驼峰命名
+	LikeCount    int64     `json:"likeCount"`     // 驼峰命名，改为int64
+	CommentCount int64     `json:"commentCount"`  // 驼峰命名，改为int64
+	FavCount     int64     `json:"favCount"`      // 驼峰命名，改为int64
+	ForwardCount int64     `json:"forwardCount"`  // 驼峰命名，改为int64
+	PageURL      string    `json:"pageUrl"`       // 驼峰命名
+	CreatedAt    time.Time `json:"createdAt"`     // 驼峰命名
+	UpdatedAt    time.Time `json:"updatedAt"`     // 驼峰命名
 }
 
 // DownloadRecord 下载记录（客户端响应格式）
+// 注意：JSON标签必须与客户端的 database.DownloadRecord 一致（驼峰命名）
 type DownloadRecord struct {
 	ID           string    `json:"id"`
-	VideoID      string    `json:"video_id"`
+	VideoID      string    `json:"videoId"`       // 驼峰命名
 	Title        string    `json:"title"`
 	Author       string    `json:"author"`
-	CoverURL     string    `json:"cover_url"`
-	Duration     int       `json:"duration"`
-	FileSize     int64     `json:"file_size"`
-	FilePath     string    `json:"file_path"`
+	CoverURL     string    `json:"coverUrl"`      // 驼峰命名
+	Duration     int64     `json:"duration"`      // 改为int64匹配客户端
+	FileSize     int64     `json:"fileSize"`      // 驼峰命名
+	FilePath     string    `json:"filePath"`      // 驼峰命名
 	Format       string    `json:"format"`
 	Resolution   string    `json:"resolution"`
 	Status       string    `json:"status"`
-	DownloadTime time.Time `json:"download_time"`
-	ErrorMessage string    `json:"error_message"`
-	LikeCount    int       `json:"like_count"`
-	CommentCount int       `json:"comment_count"`
-	ForwardCount int       `json:"forward_count"`
-	FavCount     int       `json:"fav_count"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	DownloadTime time.Time `json:"downloadTime"`  // 驼峰命名
+	ErrorMessage string    `json:"errorMessage"`  // 驼峰命名
+	LikeCount    int64     `json:"likeCount"`     // 驼峰命名，改为int64
+	CommentCount int64     `json:"commentCount"`  // 驼峰命名，改为int64
+	ForwardCount int64     `json:"forwardCount"`  // 驼峰命名，改为int64
+	FavCount     int64     `json:"favCount"`      // 驼峰命名，改为int64
+	CreatedAt    time.Time `json:"createdAt"`     // 驼峰命名
+	UpdatedAt    time.Time `json:"updatedAt"`     // 驼峰命名
 }
 
 // InitSyncService 初始化全局同步服务
@@ -486,48 +234,9 @@ func InitSyncService(config SyncConfig) {
 	go globalSyncService.Start()
 }
 
-// getNodeAPIURL 获取节点的 API URL
-func (s *SyncService) getNodeAPIURL(node *models.Node) string {
-	// 优先使用自定义的同步 API URL（用于 NAT 穿透或自定义地址）
-	if node.SyncAPIURL != "" {
-		return node.SyncAPIURL
-	}
-
-	// 使用 IP 和端口构建 URL
-	port := node.Port
-	if port == 0 {
-		port = 2025 // 默认端口
-	}
-
-	// 如果 IP 包含端口号，直接使用
-	if strings.Contains(node.IP, ":") {
-		return fmt.Sprintf("http://%s", node.IP)
-	}
-
-	return fmt.Sprintf("http://%s:%d", node.IP, port)
-}
-
 // GetSyncService 获取全局同步服务
 func GetSyncService() *SyncService {
 	return globalSyncService
-}
-
-// syncViaWebSocket 通过 WebSocket 反向同步（客户端推送数据）
-func (s *SyncService) syncViaWebSocket(node *models.Node, syncStatus *models.SyncStatus) error {
-	// 这个方法会通过 WebSocket 发送命令给客户端，要求客户端推送同步数据
-	// 实际的数据接收在 WebSocket 消息处理器中完成
-	
-	// 注意：这里只是标记需要同步，实际同步由客户端主动推送
-	// 客户端会定期检查是否需要同步，或者 Hub 可以发送命令触发
-	
-	log.Printf("[SyncService] WebSocket sync requested for device: %s", node.ID)
-	
-	// TODO: 通过 WebSocket 发送同步请求命令给客户端
-	// 这需要访问 Hub 的 SendCommand 方法
-	
-	// 暂时返回错误，让它回退到 HTTP 模式
-	// 完整实现需要客户端配合
-	return fmt.Errorf("WebSocket sync not yet implemented, use HTTP fallback")
 }
 
 // HandleSyncDataFromClient 处理客户端推送的同步数据
@@ -605,6 +314,14 @@ func (s *SyncService) saveBrowseRecords(machineID string, records []BrowseRecord
 	// 更新同步状态
 	syncStatus.LastBrowseSyncTime = time.Now()
 	syncStatus.BrowseRecordCount += int64(savedCount)
+	syncStatus.LastSyncStatus = "success"
+	syncStatus.LastSyncError = ""
+	
+	// 保存到数据库
+	if err := s.db.Save(syncStatus).Error; err != nil {
+		log.Printf("[SyncService] Failed to update sync status: %v", err)
+	}
+	
 	s.recordSyncHistory(machineID, "browse", savedCount, "success", "")
 	
 	log.Printf("[SyncService] Saved %d browse records for device: %s", savedCount, machineID)
@@ -654,6 +371,14 @@ func (s *SyncService) saveDownloadRecords(machineID string, records []DownloadRe
 	// 更新同步状态
 	syncStatus.LastDownloadSyncTime = time.Now()
 	syncStatus.DownloadRecordCount += int64(savedCount)
+	syncStatus.LastSyncStatus = "success"
+	syncStatus.LastSyncError = ""
+	
+	// 保存到数据库
+	if err := s.db.Save(syncStatus).Error; err != nil {
+		log.Printf("[SyncService] Failed to update sync status: %v", err)
+	}
+	
 	s.recordSyncHistory(machineID, "download", savedCount, "success", "")
 	
 	log.Printf("[SyncService] Saved %d download records for device: %s", savedCount, machineID)

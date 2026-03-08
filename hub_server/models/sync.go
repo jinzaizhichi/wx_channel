@@ -11,17 +11,18 @@ type HubBrowseHistory struct {
 	Title           string    `json:"title"`
 	Author          string    `json:"author"`
 	AuthorID        string    `json:"author_id"`
-	Duration        int       `json:"duration"`
+	Duration        int64     `json:"duration"`        // 改为int64匹配客户端
 	Size            int64     `json:"size"`
 	Resolution      string    `json:"resolution"`
+	FileFormat      string    `json:"file_format"`     // 视频格式标识（例如 "xWT128", "xWT111"）
 	CoverURL        string    `json:"cover_url"`
 	VideoURL        string    `json:"video_url"`
 	DecryptKey      string    `json:"decrypt_key"`
 	BrowseTime      time.Time `json:"browse_time"`
-	LikeCount       int       `json:"like_count"`
-	CommentCount    int       `json:"comment_count"`
-	FavCount        int       `json:"fav_count"`
-	ForwardCount    int       `json:"forward_count"`
+	LikeCount       int64     `json:"like_count"`      // 改为int64匹配客户端
+	CommentCount    int64     `json:"comment_count"`   // 改为int64匹配客户端
+	FavCount        int64     `json:"fav_count"`       // 改为int64匹配客户端
+	ForwardCount    int64     `json:"forward_count"`   // 改为int64匹配客户端
 	PageURL         string    `json:"page_url"`
 	SourceCreatedAt time.Time `json:"source_created_at"`
 	SourceUpdatedAt time.Time `json:"source_updated_at" gorm:"index:idx_browse_machine_updated"`
@@ -38,7 +39,7 @@ type HubDownloadRecord struct {
 	Title           string    `json:"title"`
 	Author          string    `json:"author"`
 	CoverURL        string    `json:"cover_url"`
-	Duration        int       `json:"duration"`
+	Duration        int64     `json:"duration"`        // 改为int64匹配客户端
 	FileSize        int64     `json:"file_size"`
 	FilePath        string    `json:"file_path"`
 	Format          string    `json:"format"`
@@ -46,10 +47,10 @@ type HubDownloadRecord struct {
 	Status          string    `json:"status"`
 	DownloadTime    time.Time `json:"download_time"`
 	ErrorMessage    string    `json:"error_message"`
-	LikeCount       int       `json:"like_count"`
-	CommentCount    int       `json:"comment_count"`
-	ForwardCount    int       `json:"forward_count"`
-	FavCount        int       `json:"fav_count"`
+	LikeCount       int64     `json:"like_count"`      // 改为int64匹配客户端
+	CommentCount    int64     `json:"comment_count"`   // 改为int64匹配客户端
+	ForwardCount    int64     `json:"forward_count"`   // 改为int64匹配客户端
+	FavCount        int64     `json:"fav_count"`       // 改为int64匹配客户端
 	SourceCreatedAt time.Time `json:"source_created_at"`
 	SourceUpdatedAt time.Time `json:"source_updated_at" gorm:"index:idx_download_machine_updated"`
 	SyncedAt        time.Time `json:"synced_at"`

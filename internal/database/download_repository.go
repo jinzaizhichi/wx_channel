@@ -78,6 +78,39 @@ func (r *DownloadRecordRepository) GetByID(id string) (*DownloadRecord, error) {
 	return record, nil
 }
 
+// GetByVideoID 根据 VideoID 获取下载记录
+func (r *DownloadRecordRepository) GetByVideoID(videoID string) (*DownloadRecord, error) {
+	query := `
+		SELECT id, video_id, title, author, COALESCE(cover_url, '') as cover_url, duration, file_size, file_path,
+			format, resolution, status, download_time, error_message,
+			like_count, comment_count, forward_count, fav_count,
+			created_at, updated_at
+		FROM download_records WHERE video_id = ? LIMIT 1
+	`
+	record := &DownloadRecord{}
+	var filePath, format, resolution, errorMessage, coverURL sql.NullString
+	err := r.db.QueryRow(query, videoID).Scan(
+		&record.ID, &record.VideoID, &record.Title, &record.Author, &coverURL,
+		&record.Duration, &record.FileSize, &filePath, &format,
+		&resolution, &record.Status, &record.DownloadTime,
+		&errorMessage,
+		&record.LikeCount, &record.CommentCount, &record.ForwardCount, &record.FavCount,
+		&record.CreatedAt, &record.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get download record by video id: %w", err)
+	}
+	record.CoverURL = coverURL.String
+	record.FilePath = filePath.String
+	record.Format = format.String
+	record.Resolution = resolution.String
+	record.ErrorMessage = errorMessage.String
+	return record, nil
+}
+
 // Update 更新现有的下载记录
 func (r *DownloadRecordRepository) Update(record *DownloadRecord) error {
 	record.UpdatedAt = time.Now()

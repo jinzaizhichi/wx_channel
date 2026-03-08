@@ -1,12 +1,11 @@
 <template>
   <div class="min-h-screen bg-bg p-4 lg:p-12 font-sans text-text">
     <Toast />
-    <ConfirmDialog />
     
     <header class="flex justify-between items-center mb-4 lg:mb-8">
       <div>
         <h1 class="text-2xl lg:text-3xl font-bold text-text">数据同步</h1>
-        <p class="text-text-muted text-sm mt-1">管理设备数据同步状态</p>
+        <p class="text-text-muted text-sm mt-1">客户端自动推送数据，无需手动触发</p>
       </div>
       <div class="flex gap-2">
         <Button 
@@ -16,15 +15,6 @@
           rounded
           size="small"
           @click="refreshSyncStatus"
-        />
-        <Button 
-          label="同步所有设备" 
-          icon="pi pi-sync" 
-          :loading="syncingAll"
-          rounded
-          size="small"
-          severity="success"
-          @click="syncAllDevices"
         />
       </div>
     </header>
@@ -186,16 +176,6 @@
           <template #body="{ data }">
             <div class="flex gap-2">
               <Button 
-                icon="pi pi-sync" 
-                text 
-                rounded 
-                severity="success" 
-                size="small" 
-                @click="syncDevice(data)" 
-                v-tooltip="'立即同步'"
-                :loading="data.syncing"
-              />
-              <Button 
                 icon="pi pi-chart-line" 
                 text 
                 rounded 
@@ -203,6 +183,24 @@
                 size="small" 
                 @click="showDetails(data)" 
                 v-tooltip="'查看详情'" 
+              />
+              <Button 
+                icon="pi pi-eye" 
+                text 
+                rounded 
+                severity="success" 
+                size="small" 
+                @click="showBrowseRecords(data)" 
+                v-tooltip="'浏览记录'" 
+              />
+              <Button 
+                icon="pi pi-download" 
+                text 
+                rounded 
+                severity="warning" 
+                size="small" 
+                @click="showDownloadRecords(data)" 
+                v-tooltip="'下载记录'" 
               />
               <Button 
                 icon="pi pi-history" 
@@ -284,7 +282,6 @@
         <!-- Actions -->
         <div class="flex justify-end gap-2 pt-4 border-t border-surface-200">
           <Button label="关闭" text severity="secondary" @click="dialogs.details = false" />
-          <Button label="立即同步" icon="pi pi-sync" @click="syncDevice(selectedStatus); dialogs.details = false" />
         </div>
       </div>
     </Dialog>
@@ -348,25 +345,199 @@
       </div>
     </Dialog>
 
+    <!-- Browse Records Dialog -->
+    <Dialog v-model:visible="dialogs.browseRecords" header="浏览记录" modal :style="{ width: '80rem' }" :breakpoints="{ '960px': '90vw', '640px': '95vw' }">
+      <div v-if="selectedStatus">
+        <p class="text-text-muted mb-4">设备: <span class="font-bold">{{ selectedStatus.device_name }}</span> - 共 {{ browseRecordsTotal }} 条记录</p>
+        
+        <DataTable 
+          :value="browseRecords" 
+          :loading="browseRecordsLoading"
+          paginator 
+          :rows="20"
+          :totalRecords="browseRecordsTotal"
+          :lazy="true"
+          @page="onBrowseRecordsPageChange"
+          stripedRows
+        >
+          <template #empty>
+            <div class="text-center p-8 text-text-muted">暂无浏览记录</div>
+          </template>
+
+          <Column field="cover_url" header="封面" style="width: 100px">
+            <template #body="{ data }">
+              <img v-if="data.cover_url" :src="data.cover_url" class="w-16 h-16 object-cover rounded" @error="e => e.target.style.display='none'" />
+              <div v-else class="w-16 h-16 bg-surface-100 rounded flex items-center justify-center">
+                <i class="pi pi-image text-surface-400"></i>
+              </div>
+            </template>
+          </Column>
+
+          <Column field="title" header="标题" style="min-width: 250px">
+            <template #body="{ data }">
+              <div class="flex flex-col gap-1">
+                <span class="font-medium line-clamp-2">{{ data.title || '无标题' }}</span>
+                <span class="text-xs text-text-muted">{{ data.author || '未知作者' }}</span>
+              </div>
+            </template>
+          </Column>
+
+          <Column field="duration" header="时长" style="width: 100px">
+            <template #body="{ data }">
+              <span v-if="data.duration">{{ formatDuration(data.duration) }}</span>
+              <span v-else class="text-text-muted">-</span>
+            </template>
+          </Column>
+
+          <Column field="resolution" header="分辨率" style="width: 120px">
+            <template #body="{ data }">
+              <Tag v-if="data.resolution" :value="data.resolution" severity="info" size="small" />
+              <span v-else class="text-text-muted">-</span>
+            </template>
+          </Column>
+
+          <Column header="互动数据" style="width: 200px">
+            <template #body="{ data }">
+              <div class="flex gap-3 text-xs">
+                <span v-if="data.like_count" class="flex items-center gap-1">
+                  <i class="pi pi-heart text-red-500"></i> {{ formatNumber(data.like_count) }}
+                </span>
+                <span v-if="data.comment_count" class="flex items-center gap-1">
+                  <i class="pi pi-comment text-blue-500"></i> {{ formatNumber(data.comment_count) }}
+                </span>
+                <span v-if="data.fav_count" class="flex items-center gap-1">
+                  <i class="pi pi-star text-yellow-500"></i> {{ formatNumber(data.fav_count) }}
+                </span>
+              </div>
+            </template>
+          </Column>
+
+          <Column field="browse_time" header="浏览时间" sortable style="min-width: 180px">
+            <template #body="{ data }">
+              {{ formatTime(data.browse_time) }}
+            </template>
+          </Column>
+
+          <Column header="操作" style="width: 100px">
+            <template #body="{ data }">
+              <Button 
+                icon="pi pi-play" 
+                text 
+                rounded 
+                severity="success" 
+                size="small" 
+                @click="goToVideoDetail(data)" 
+                v-tooltip="'查看详情并播放'" 
+              />
+            </template>
+          </Column>
+        </DataTable>
+      </div>
+    </Dialog>
+
+    <!-- Download Records Dialog -->
+    <Dialog v-model:visible="dialogs.downloadRecords" header="下载记录" modal :style="{ width: '80rem' }" :breakpoints="{ '960px': '90vw', '640px': '95vw' }">
+      <div v-if="selectedStatus">
+        <p class="text-text-muted mb-4">设备: <span class="font-bold">{{ selectedStatus.device_name }}</span> - 共 {{ downloadRecordsTotal }} 条记录</p>
+        
+        <DataTable 
+          :value="downloadRecords" 
+          :loading="downloadRecordsLoading"
+          paginator 
+          :rows="20"
+          :totalRecords="downloadRecordsTotal"
+          :lazy="true"
+          @page="onDownloadRecordsPageChange"
+          stripedRows
+        >
+          <template #empty>
+            <div class="text-center p-8 text-text-muted">暂无下载记录</div>
+          </template>
+
+          <Column field="cover_url" header="封面" style="width: 100px">
+            <template #body="{ data }">
+              <img v-if="data.cover_url" :src="data.cover_url" class="w-16 h-16 object-cover rounded" @error="e => e.target.style.display='none'" />
+              <div v-else class="w-16 h-16 bg-surface-100 rounded flex items-center justify-center">
+                <i class="pi pi-image text-surface-400"></i>
+              </div>
+            </template>
+          </Column>
+
+          <Column field="title" header="标题" style="min-width: 250px">
+            <template #body="{ data }">
+              <div class="flex flex-col gap-1">
+                <span class="font-medium line-clamp-2">{{ data.title || '无标题' }}</span>
+                <span class="text-xs text-text-muted">{{ data.author || '未知作者' }}</span>
+              </div>
+            </template>
+          </Column>
+
+          <Column field="status" header="状态" style="width: 100px">
+            <template #body="{ data }">
+              <Tag 
+                :value="data.status === 'completed' ? '完成' : data.status === 'failed' ? '失败' : data.status" 
+                :severity="data.status === 'completed' ? 'success' : data.status === 'failed' ? 'danger' : 'info'"
+                rounded
+              />
+            </template>
+          </Column>
+
+          <Column field="file_size" header="文件大小" style="width: 120px">
+            <template #body="{ data }">
+              <span v-if="data.file_size">{{ formatFileSize(data.file_size) }}</span>
+              <span v-else class="text-text-muted">-</span>
+            </template>
+          </Column>
+
+          <Column field="format" header="格式" style="width: 100px">
+            <template #body="{ data }">
+              <Tag v-if="data.format" :value="data.format.toUpperCase()" severity="secondary" size="small" />
+              <span v-else class="text-text-muted">-</span>
+            </template>
+          </Column>
+
+          <Column field="resolution" header="分辨率" style="width: 120px">
+            <template #body="{ data }">
+              <Tag v-if="data.resolution" :value="data.resolution" severity="info" size="small" />
+              <span v-else class="text-text-muted">-</span>
+            </template>
+          </Column>
+
+          <Column field="download_time" header="下载时间" sortable style="min-width: 180px">
+            <template #body="{ data }">
+              {{ formatTime(data.download_time) }}
+            </template>
+          </Column>
+        </DataTable>
+      </div>
+    </Dialog>
+
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { FilterMatchMode } from '@primevue/core/api'
 import { useToast } from 'primevue/usetoast'
-import { useConfirm } from 'primevue/useconfirm'
 import axios from 'axios'
 
+const router = useRouter()
 const toast = useToast()
-const confirm = useConfirm()
 
 const syncStatuses = ref([])
 const loading = ref(false)
-const syncingAll = ref(false)
 const selectedStatus = ref(null)
 const syncHistory = ref([])
 const historyLoading = ref(false)
+const browseRecords = ref([])
+const browseRecordsLoading = ref(false)
+const browseRecordsTotal = ref(0)
+const browseRecordsPage = ref(1)
+const downloadRecords = ref([])
+const downloadRecordsLoading = ref(false)
+const downloadRecordsTotal = ref(0)
+const downloadRecordsPage = ref(1)
 
 const filters = ref({
   global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -383,8 +554,13 @@ const statusOptions = [
 
 const dialogs = ref({
   details: false,
-  history: false
+  history: false,
+  browseRecords: false,
+  downloadRecords: false,
+  videoPlayer: false
 })
+
+const selectedVideo = ref(null)
 
 // Computed
 const syncingCount = computed(() => syncStatuses.value.filter(s => s.last_sync_status === 'in_progress').length)
@@ -427,45 +603,6 @@ const refreshSyncStatus = async () => {
   }
 }
 
-const syncAllDevices = async () => {
-  confirm.require({
-    message: '确定要同步所有设备的数据吗？这可能需要一些时间。',
-    header: '同步确认',
-    icon: 'pi pi-sync',
-    acceptLabel: '确认',
-    rejectLabel: '取消',
-    accept: async () => {
-      syncingAll.value = true
-      try {
-        const response = await axios.post('/api/sync/trigger', { sync_all: true })
-        if (response.data.code === 0) {
-          toast.add({ severity: 'success', summary: '成功', detail: '已开始同步所有设备', life: 3000 })
-          setTimeout(refreshSyncStatus, 2000)
-        }
-      } catch (error) {
-        toast.add({ severity: 'error', summary: '错误', detail: '触发同步失败', life: 3000 })
-      } finally {
-        syncingAll.value = false
-      }
-    }
-  })
-}
-
-const syncDevice = async (status) => {
-  status.syncing = true
-  try {
-    const response = await axios.post('/api/sync/trigger', { machine_id: status.machine_id })
-    if (response.data.code === 0) {
-      toast.add({ severity: 'success', summary: '成功', detail: '已开始同步设备', life: 2000 })
-      setTimeout(refreshSyncStatus, 2000)
-    }
-  } catch (error) {
-    toast.add({ severity: 'error', summary: '错误', detail: '触发同步失败: ' + (error.response?.data?.message || error.message), life: 3000 })
-  } finally {
-    status.syncing = false
-  }
-}
-
 const showDetails = (status) => {
   selectedStatus.value = status
   dialogs.value.details = true
@@ -489,6 +626,93 @@ const showHistory = async (status) => {
   }
 }
 
+const showBrowseRecords = async (status) => {
+  selectedStatus.value = status
+  dialogs.value.browseRecords = true
+  browseRecordsPage.value = 1
+  await loadBrowseRecords()
+}
+
+const loadBrowseRecords = async () => {
+  browseRecordsLoading.value = true
+  try {
+    const response = await axios.get('/api/sync/browse', {
+      params: {
+        machine_id: selectedStatus.value.machine_id,
+        page: browseRecordsPage.value,
+        page_size: 20
+      }
+    })
+    if (response.data.code === 0) {
+      browseRecords.value = response.data.data.records || []
+      browseRecordsTotal.value = response.data.data.total || 0
+    }
+  } catch (error) {
+    console.error('Failed to load browse records:', error)
+    toast.add({ severity: 'error', summary: '错误', detail: '加载浏览记录失败', life: 3000 })
+  } finally {
+    browseRecordsLoading.value = false
+  }
+}
+
+const onBrowseRecordsPageChange = (event) => {
+  browseRecordsPage.value = event.page + 1
+  loadBrowseRecords()
+}
+
+const showDownloadRecords = async (status) => {
+  selectedStatus.value = status
+  dialogs.value.downloadRecords = true
+  downloadRecordsPage.value = 1
+  await loadDownloadRecords()
+}
+
+const loadDownloadRecords = async () => {
+  downloadRecordsLoading.value = true
+  try {
+    const response = await axios.get('/api/sync/download', {
+      params: {
+        machine_id: selectedStatus.value.machine_id,
+        page: downloadRecordsPage.value,
+        page_size: 20
+      }
+    })
+    if (response.data.code === 0) {
+      downloadRecords.value = response.data.data.records || []
+      downloadRecordsTotal.value = response.data.data.total || 0
+    }
+  } catch (error) {
+    console.error('Failed to load download records:', error)
+    toast.add({ severity: 'error', summary: '错误', detail: '加载下载记录失败', life: 3000 })
+  } finally {
+    downloadRecordsLoading.value = false
+  }
+}
+
+const onDownloadRecordsPageChange = (event) => {
+  downloadRecordsPage.value = event.page + 1
+  loadDownloadRecords()
+}
+
+const formatDuration = (milliseconds) => {
+  if (!milliseconds) return '-'
+  // 数据库存储的是毫秒，需要转换为秒
+  const seconds = Math.floor(milliseconds / 1000)
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '-'
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB'
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB'
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB'
+}
+
 const formatTime = (time) => {
   if (!time) return '从未'
   const date = new Date(time)
@@ -498,5 +722,45 @@ const formatTime = (time) => {
 const formatNumber = (num) => {
   if (num === null || num === undefined) return '0'
   return num.toLocaleString('zh-CN')
+}
+
+// 跳转到视频详情页
+const goToVideoDetail = (record) => {
+  // 浏览记录中的 id 字段就是 object_id
+  // 但是没有 nonce_id，所以需要特殊处理
+  if (record.id) {
+    // 如果有 video_url 和 decrypt_key，可以直接播放
+    // 将完整的记录信息通过 state 传递给视频详情页
+    router.push({
+      path: `/video/${record.id}`,
+      query: {
+        from: 'browse_history' // 标记来源
+      },
+      state: {
+        // 传递浏览记录的完整信息
+        browseRecord: {
+          id: record.id,
+          title: record.title,
+          author: record.author,
+          cover_url: record.cover_url,
+          video_url: record.video_url,
+          decrypt_key: record.decrypt_key,
+          duration: record.duration,
+          resolution: record.resolution,
+          file_format: record.file_format, // 传递 file_format 字段
+          like_count: record.like_count,
+          comment_count: record.comment_count,
+          fav_count: record.fav_count
+        }
+      }
+    })
+  } else {
+    toast.add({ 
+      severity: 'warn', 
+      summary: '提示', 
+      detail: '视频 ID 不存在，无法跳转', 
+      life: 3000 
+    })
+  }
 }
 </script>

@@ -64,7 +64,8 @@ type Config struct {
 	SavePageJS       bool `mapstructure:"save_page_js"`
 
 	// UI 功能开关
-	ShowLogButton bool `mapstructure:"show_log_button"`
+	ShowLogButton         bool `mapstructure:"show_log_button"`
+	EnableLogInterception bool `mapstructure:"enable_log_interception"` // 是否拦截console日志（禁用可节省内存）
 
 	// 云端管理配置
 	CloudEnabled bool   `mapstructure:"cloud_enabled"` // 是否启用云端管理功能
@@ -86,9 +87,10 @@ type Config struct {
 
 // HubSyncConfig Hub同步配置
 type HubSyncConfig struct {
-	Enabled    bool     `mapstructure:"enabled"`     // 是否启用Hub同步API
-	Token      string   `mapstructure:"token"`       // Hub访问令牌
-	AllowedIPs []string `mapstructure:"allowed_ips"` // 允许访问的IP列表
+	Enabled       bool          `mapstructure:"enabled"`         // 是否启用Hub同步
+	PushEnabled   bool          `mapstructure:"push_enabled"`    // 是否启用主动推送
+	PushInterval  time.Duration `mapstructure:"push_interval"`   // 推送间隔
+	PushBatchSize int           `mapstructure:"push_batch_size"` // 推送批量大小
 }
 
 var globalConfig *Config
@@ -221,6 +223,7 @@ func setDefaults() {
 	viper.SetDefault("save_search_data", false)
 	viper.SetDefault("save_page_js", false)
 	viper.SetDefault("show_log_button", false)
+	viper.SetDefault("enable_log_interception", false) // 默认禁用日志拦截以节省内存
 
 	viper.SetDefault("cloud_enabled", true) // 默认不启用云端管理
 	viper.SetDefault("cloud_hub_url", "ws://wx.dujulaoren.com/ws/client")
@@ -236,8 +239,9 @@ func setDefaults() {
 
 	// Hub同步默认值
 	viper.SetDefault("hub_sync.enabled", true)
-	viper.SetDefault("hub_sync.token", "")
-	viper.SetDefault("hub_sync.allowed_ips", []string{})
+	viper.SetDefault("hub_sync.push_enabled", true)
+	viper.SetDefault("hub_sync.push_interval", 5*time.Minute)
+	viper.SetDefault("hub_sync.push_batch_size", 1000)
 }
 
 // GetMachineID 获取或生成唯一的机器 ID (稳定硬件特征码)
@@ -456,6 +460,9 @@ func loadFromDatabase(config *Config) {
 	}
 	if val, err := dbLoader.GetBool("show_log_button", config.ShowLogButton); err == nil {
 		config.ShowLogButton = val
+	}
+	if val, err := dbLoader.GetBool("enable_log_interception", config.EnableLogInterception); err == nil {
+		config.EnableLogInterception = val
 	}
 
 	// 云端配置

@@ -81,7 +81,9 @@ func GetDeviceSyncStatus(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// TriggerSync 触发同步
+// TriggerSync 触发同步检查
+// 注意：WebSocket 推送模式下，客户端会自动推送数据
+// 此接口仅用于检查设备状态，不会主动拉取数据
 func TriggerSync(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		MachineID string `json:"machine_id"`
@@ -108,7 +110,7 @@ func TriggerSync(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.SyncAll {
-		// 同步所有设备
+		// 检查所有设备状态
 		go func() {
 			nodes, err := database.GetActiveNodes(10 * 60 * 1000000000) // 10 minutes
 			if err != nil {
@@ -122,7 +124,7 @@ func TriggerSync(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"code":    0,
-			"message": "Sync started for all devices",
+			"message": "正在检查所有设备状态，客户端会自动推送数据",
 		})
 		return
 	}
@@ -136,13 +138,13 @@ func TriggerSync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 同步单个设备
+	// 检查单个设备状态
 	go syncService.SyncDevice(req.MachineID)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"code":    0,
-		"message": "Sync started",
+		"message": "正在检查设备状态，客户端会自动推送数据",
 	})
 }
 

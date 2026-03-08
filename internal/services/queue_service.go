@@ -184,6 +184,11 @@ func (s *QueueService) GetByID(id string) (*database.QueueItem, error) {
 	return s.repo.GetByID(id)
 }
 
+// GetByVideoID 根据 VideoID 返回队列项目
+func (s *QueueService) GetByVideoID(videoID string) (*database.QueueItem, error) {
+	return s.repo.GetByVideoID(videoID)
+}
+
 // GetByStatus 返回具有特定状态的队列项目
 func (s *QueueService) GetByStatus(status string) ([]database.QueueItem, error) {
 
@@ -247,9 +252,28 @@ func (s *QueueService) CompleteDownload(id string) error {
 	// 路径格式: {baseDir}/downloads/{authorFolder}/{cleanFilename}.mp4
 	filePath := calculateDownloadFilePath(item.Author, item.Title)
 
-	// 创建下载记录
+	downloadRepo := database.NewDownloadRecordRepository()
+
+	// 检查是否已经存在该视频的下载记录 (由 batch.go 等其他流程创建)
+	if existingRecord, _ := downloadRepo.GetByVideoID(item.VideoID); existingRecord != nil {
+		// 已存在记录，仅需确保状态为完成，不需要新建
+		if existingRecord.Status != database.DownloadStatusCompleted {
+			existingRecord.Status = database.DownloadStatusCompleted
+			existingRecord.FilePath = filePath
+			_ = downloadRepo.Update(existingRecord)
+		}
+		return nil
+	}
+
+	// 使用 VideoID 作为主键ID (如果有)，否则使用 UUID，确保与 batch.go 行为一致，触发 REPLACE 逻辑
+	recordID := item.VideoID
+	if recordID == "" {
+		recordID = uuid.New().String()
+	}
+
+	// 创建全新的下载记录
 	downloadRecord := &database.DownloadRecord{
-		ID:           uuid.New().String(),
+		ID:           recordID,
 		VideoID:      item.VideoID,
 		Title:        item.Title,
 		Author:       item.Author,
@@ -263,7 +287,6 @@ func (s *QueueService) CompleteDownload(id string) error {
 		DownloadTime: time.Now(),
 	}
 
-	downloadRepo := database.NewDownloadRecordRepository()
 	if err := downloadRepo.Create(downloadRecord); err != nil {
 		// 记录错误但不失败完成
 		fmt.Printf("Warning: failed to create download record: %v\n", err)

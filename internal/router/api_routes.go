@@ -24,6 +24,7 @@ type APIRouter struct {
 	proxyService       *api.ProxyService
 	certificateService *api.CertificateService
 	versionService     *api.VersionAPI
+	radarAPI           *api.RadarServiceAPI
 	allowedOrigins     []string
 	secretToken        string
 }
@@ -64,6 +65,7 @@ func NewAPIRouter(cfg *config.Config, hub *websocket.Hub, sunny *SunnyNet.Sunny)
 		proxyService:       api.NewProxyService(sunny, cfg.Port),
 		certificateService: api.NewCertificateService(sunny),
 		versionService:     api.NewVersionAPI(),
+		radarAPI:           api.NewRadarServiceAPI(),
 		allowedOrigins:     cfg.AllowedOrigins,
 		secretToken:        cfg.SecretToken,
 	}
@@ -128,12 +130,6 @@ func (r *APIRouter) registerRoutes() {
 	// 控制台 API - 触发评论采集
 	r.mux.HandleFunc("/api/control/comment/start", r.consoleHandler.HandleStartCommentCollection)
 
-	// Hub 同步 API - 供 Hub Server 拉取数据
-	syncHandler := handlers.NewSyncAPIHandler()
-	r.mux.HandleFunc("/api/sync/browse", syncHandler.HandleGetBrowseHistory)
-	r.mux.HandleFunc("/api/sync/download", syncHandler.HandleGetDownloadRecords)
-	r.mux.HandleFunc("/api/sync/stats", syncHandler.HandleGetStats)
-
 	// v1 版本化路由（别名）
 	r.mux.HandleFunc("/api/v1/browse", r.consoleHandler.HandleBrowseAPI)
 	r.mux.HandleFunc("/api/v1/browse/", r.consoleHandler.HandleBrowseAPI)
@@ -144,6 +140,9 @@ func (r *APIRouter) registerRoutes() {
 	r.mux.HandleFunc("/api/v1/settings", r.consoleHandler.HandleSettingsAPI)
 	r.mux.HandleFunc("/api/v1/stats", r.consoleHandler.HandleStatsAPI)
 	r.mux.HandleFunc("/api/v1/stats/", r.consoleHandler.HandleStatsAPI)
+
+	// Radar API
+	r.radarAPI.RegisterRoutes(r.mux)
 }
 
 // Handler 返回带中间件的 HTTP Handler

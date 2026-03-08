@@ -61,6 +61,7 @@ type App struct {
 	// 服务
 	WSHub          *websocket.Hub
 	SearchService  *api.SearchService
+	RadarService   *services.RadarService  // 自动轮询雷达
 	GopeedService  *services.GopeedService // Add GopeedService
 	CloudConnector *cloud.Connector
 
@@ -318,6 +319,12 @@ func (app *App) Run() {
 
 	utils.Info("🔍 请打开需要下载的视频号页面进行下载")
 
+	// 启动对标雷达服务
+	queueService := services.NewQueueService()
+	radarRepo := database.NewRadarRepository()
+	app.RadarService = services.NewRadarService(radarRepo, queueService, app.WSHub)
+	app.RadarService.Start()
+
 	// 4. 【异步】处理 Windows 进程注入和连通性检查 (不阻塞主线程)
 	go func() {
 		// 如果是 Windows，尝试启动注入引擎
@@ -355,6 +362,11 @@ func (app *App) Run() {
 	// 启动时检查更新 - 已移动到 Run 函数开头
 
 	<-done
+
+	// 清理服务
+	if app.RadarService != nil {
+		app.RadarService.Stop()
+	}
 }
 
 // GlobalHttpCallback 桥接到单例 app 实例
