@@ -81,9 +81,6 @@ max_log_size_mb: 5
 # 是否保存页面快照
 save_page_snapshot: false
 
-# 是否保存搜索数据
-save_search_data: false
-
 # 是否保存页面 JS
 save_page_js: false
 

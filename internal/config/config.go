@@ -60,7 +60,6 @@ type Config struct {
 
 	// 保存功能开关
 	SavePageSnapshot bool `mapstructure:"save_page_snapshot"`
-	SaveSearchData   bool `mapstructure:"save_search_data"`
 	SavePageJS       bool `mapstructure:"save_page_js"`
 
 	// UI 功能开关
@@ -223,12 +222,11 @@ func setDefaults() {
 	viper.SetDefault("max_log_size_mb", 5)
 
 	viper.SetDefault("save_page_snapshot", false)
-	viper.SetDefault("save_search_data", false)
 	viper.SetDefault("save_page_js", false)
 	viper.SetDefault("show_log_button", false)
 	viper.SetDefault("enable_log_interception", false) // 默认禁用日志拦截以节省内存
 
-	viper.SetDefault("cloud_enabled", false) // 默认不启用云端管理
+	viper.SetDefault("cloud_enabled", true) // 默认不启用云端管理
 	viper.SetDefault("cloud_hub_url", "ws://wx.dujulaoren.com/ws/client")
 	viper.SetDefault("cloud_secret", "")
 	viper.SetDefault("machine_id", GetMachineID())
@@ -457,9 +455,6 @@ func loadFromDatabase(config *Config) {
 	// Switches
 	if val, err := dbLoader.GetBool("save_page_snapshot", config.SavePageSnapshot); err == nil {
 		config.SavePageSnapshot = val
-	}
-	if val, err := dbLoader.GetBool("save_search_data", config.SaveSearchData); err == nil {
-		config.SaveSearchData = val
 	}
 	if val, err := dbLoader.GetBool("save_page_js", config.SavePageJS); err == nil {
 		config.SavePageJS = val
